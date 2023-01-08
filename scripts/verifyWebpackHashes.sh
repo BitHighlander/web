@@ -1,2 +1,2 @@
 #!/bin/bash
-return
+return true
