@@ -6,6 +6,7 @@ import {
   ModalBody,
   ModalHeader,
 } from '@chakra-ui/react'
+import { KeepKeySdk } from '@keepkey/keepkey-sdk'
 import type { Event } from '@shapeshiftoss/hdwallet-core'
 import { useCallback, useState } from 'react'
 import { CircularProgress } from 'components/CircularProgress/CircularProgress'
@@ -50,27 +51,30 @@ export const KeepKeyConnect = () => {
     dispatch({ type: WalletActions.DOWNLOAD_UPDATER, payload: false })
   }, [dispatch])
 
+  const setupKeepKeySDK = async () => {
+    let serviceKey = window.localStorage.getItem('@app/serviceKey')
+    let config:any = {
+      apiKey: serviceKey,
+      pairingInfo:{
+        name: "ShapeShift",
+        imageUrl:'https://assets.coincap.io/assets/icons/fox@2x.png',
+        basePath:'http://localhost:1646/spec/swagger.json'
+      }
+    }
+    let sdk = await KeepKeySdk.create(config)
+    console.log("config.serviceKey: ",config.serviceKey)
+    if (!serviceKey) {
+      window.localStorage.setItem('@app/serviceKey', config.serviceKey)
+    }
+    return sdk
+  }
+
   const pairDevice = async () => {
     setError(null)
     setLoading(true)
-    if (state.adapters && !state.adapters.has(KeyManager.KeepKey)) {
-      // if keepkey is connected to another tab, it does not get added to state.adapters.
-      setErrorLoading('walletProvider.keepKey.connect.conflictingApp')
-      return
-    }
-    if (state.adapters && state.adapters?.has(KeyManager.KeepKey)) {
-      const wallet = await state.adapters
-        .get(KeyManager.KeepKey)
-        ?.pairDevice()
-        .catch(err => {
-          if (err.name === 'ConflictingApp') {
-            setErrorLoading('walletProvider.keepKey.connect.conflictingApp')
-            return
-          }
-          moduleLogger.error(err, 'KeepKey Connect: There was an error initializing the wallet')
-          setErrorLoading('walletProvider.errors.walletNotFound')
-          return
-        })
+    if (state.adapters) {
+      const sdk = await setupKeepKeySDK()
+      let wallet = await state.adapters.get(KeyManager.KeepKey)?.pairDevice(sdk)
       if (!wallet) {
         setErrorLoading('walletProvider.errors.walletNotFound')
         return
