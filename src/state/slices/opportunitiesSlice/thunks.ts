@@ -9,7 +9,7 @@ import { opportunitiesApi } from '../opportunitiesSlice/opportunitiesSlice'
 export const fetchAllLpOpportunitiesMetadata = async (options?: StartQueryActionCreatorOptions) => {
   const { getOpportunityMetadata } = opportunitiesApi.endpoints
 
-  await Promise.all(
+  await Promise.allSettled(
     foxEthLpAssetIds.map(opportunityId =>
       store.dispatch(
         getOpportunityMetadata.initiate(
@@ -33,6 +33,17 @@ export const fetchAllStakingOpportunitiesMetadata = async (
   const { getOpportunityMetadata } = opportunitiesApi.endpoints
 
   const metadataPromises = [
+    store.dispatch(
+      opportunitiesApi.endpoints.getOpportunitiesMetadata.initiate(
+        {
+          defiType: DefiType.Staking,
+          defiProvider: DefiProvider.ThorchainSavers,
+          opportunityType: DefiType.Staking,
+        },
+        // Any previous query without portfolio loaded will be rejected, the first successful one will be cached
+        { forceRefetch: false, ...options },
+      ),
+    ),
     store.dispatch(
       opportunitiesApi.endpoints.getOpportunitiesMetadata.initiate(
         {
@@ -175,7 +186,7 @@ export const fetchAllLpOpportunitiesUserdata = async (
 ) => {
   const { getOpportunityUserData } = opportunitiesApi.endpoints
 
-  await Promise.all(
+  await Promise.allSettled(
     foxEthLpAssetIds.map(
       async opportunityId =>
         await store.dispatch(
