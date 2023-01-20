@@ -65,7 +65,7 @@ export const KeepKeyConnect = () => {
     let sdk = await KeepKeySdk.create(config)
     console.log("config.serviceKey: ",config.serviceKey)
     if (!serviceKey) {
-      window.localStorage.setItem('@app/serviceKey', config.serviceKey)
+      window.localStorage.setItem('@app/serviceKey', config.apiKey)
     }
     return sdk
   }
