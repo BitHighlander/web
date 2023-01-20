@@ -58,7 +58,8 @@ export const KeepKeyConnect = () => {
       pairingInfo:{
         name: "ShapeShift",
         imageUrl:'https://assets.coincap.io/assets/icons/fox@2x.png',
-        basePath:'http://localhost:1646/spec/swagger.json'
+        basePath:'http://localhost:1646/spec/swagger.json',
+        url:'https://web-theta-one.vercel.app'
       }
     }
     let sdk = await KeepKeySdk.create(config)
