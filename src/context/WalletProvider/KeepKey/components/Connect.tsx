@@ -87,7 +87,6 @@ export const KeepKeyConnect = () => {
         wallet = await state.adapters.get(KeyManager.KeepKey)?.pairDevice(sdk)
       }catch(e){
         console.log("error: ",e)
-
       }
 
 
