@@ -1,4 +1,4 @@
-import { ethAssetId, foxAssetId, fromAccountId, fromAssetId } from '@shapeshiftoss/caip'
+import { ethAssetId, ethChainId, foxAssetId, fromAccountId, fromAssetId } from '@shapeshiftoss/caip'
 import type { MarketData } from '@shapeshiftoss/types'
 import { HistoryTimeframe } from '@shapeshiftoss/types'
 import { Fetcher, Token } from '@uniswap/sdk'
@@ -235,6 +235,10 @@ export const foxFarmingLpUserDataResolver = ({
   accountId,
   reduxApi,
 }: OpportunityUserDataResolverInput): Promise<void> => {
+  const { chainId: accountChainId } = fromAccountId(accountId)
+  // Looks the same as the happy path but isn't, we won't hit this as a guard with non-Ethereum account ChainIds
+  if (accountChainId !== ethChainId) return Promise.resolve()
+
   const { getState } = reduxApi
   const state: ReduxState = getState() as any
   const portfolioLoadingStatusGranular = selectPortfolioLoadingStatusGranular(state)
@@ -262,6 +266,13 @@ export const foxFarmingStakingUserDataResolver = async ({
   accountId,
   reduxApi,
 }: OpportunityUserDataResolverInput): Promise<{ data: GetOpportunityUserStakingDataOutput }> => {
+  const { chainId: accountChainId } = fromAccountId(accountId)
+  if (accountChainId !== ethChainId)
+    return {
+      data: {
+        byId: {},
+      },
+    }
   const { getState } = reduxApi
   const state: any = getState() // ReduxState causes circular dependency
   const lpTokenMarketData: MarketData = selectMarketDataById(state, foxEthLpAssetId)
