@@ -68,7 +68,12 @@ export const thorchainSaversStakingOpportunitiesMetadataResolver = async ({
   const { SaversVaults } = selectFeatureFlags(state)
 
   if (!(SaversVaults && opportunityIds?.length)) {
-    throw new Error('Not ready to fetch THORChain savers metadata')
+    return Promise.resolve({
+      data: {
+        byId: {},
+        type: opportunityType,
+      },
+    })
   }
 
   const midgardPools = await getMidgardPools()
@@ -182,7 +187,10 @@ export const thorchainSaversStakingOpportunitiesUserDataResolver = async ({
         `Error fetching THORCHain savers positions for assetId: ${stakingOpportunityId}`,
       )
 
-    const accountPosition = await getThorchainSaversPosition(accountId, stakingOpportunityId)
+    const accountPosition = await getThorchainSaversPosition({
+      accountId,
+      assetId: stakingOpportunityId,
+    })
 
     const { asset_deposit_value, asset_redeem_value } = accountPosition
 
