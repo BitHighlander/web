@@ -18,7 +18,6 @@ import { useWallet } from 'hooks/useWallet/useWallet'
 import { logger } from 'lib/logger'
 
 import { KeepKeyConfig } from '../config'
-import { KeepKeyConfigRest } from '../config'
 import { FailureType, MessageType } from '../KeepKeyTypes'
 
 const moduleLogger = logger.child({ namespace: ['Connect'] })
@@ -66,7 +65,7 @@ export const KeepKeyConnect = () => {
     let sdk = await KeepKeySdk.create(config)
     console.log("config.serviceKey: ",config.serviceKey)
     if (!serviceKey) {
-      window.localStorage.setItem('@app/serviceKey', config.serviceKey)
+      window.localStorage.setItem('@app/serviceKey', config.apiKey)
     }
     return sdk
   }
@@ -74,34 +73,9 @@ export const KeepKeyConnect = () => {
   const pairDevice = async () => {
     setError(null)
     setLoading(true)
-    if (state.adapters && !state.adapters.has(KeyManager.KeepKey)) {
-      // if keepkey is connected to another tab, it does not get added to state.adapters.
-      setErrorLoading('walletProvider.keepKey.connect.conflictingApp')
-      return
-    }
-    if (state.adapters && state.adapters?.has(KeyManager.KeepKey)) {
-      //Check if Keepkey bridge is live
-      let wallet
-      try{
-        const sdk = await setupKeepKeySDK()
-        wallet = await state.adapters.get(KeyManager.KeepKey)?.pairDevice(sdk)
-      }catch(e){
-        console.log("error: ",e)
-      }
-
-
-      wallet = await state.adapters
-        .get(KeyManager.KeepKey)
-        ?.pairDevice()
-        .catch(err => {
-          if (err.name === 'ConflictingApp') {
-            setErrorLoading('walletProvider.keepKey.connect.conflictingApp')
-            return
-          }
-          moduleLogger.error(err, 'KeepKey Connect: There was an error initializing the wallet')
-          setErrorLoading('walletProvider.errors.walletNotFound')
-          return
-        })
+    if (state.adapters) {
+      const sdk = await setupKeepKeySDK()
+      let wallet = await state.adapters.get(KeyManager.KeepKey)?.pairDevice(sdk)
       if (!wallet) {
         setErrorLoading('walletProvider.errors.walletNotFound')
         return
