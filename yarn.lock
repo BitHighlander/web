@@ -3584,15 +3584,15 @@
     google-protobuf "^3.7.0-rc.2"
     pbjs "^0.0.5"
 
-"@keepkey/hdwallet-keepkey-rest@^1.40.4":
-  version "1.40.4"
-  resolved "https://registry.yarnpkg.com/@keepkey/hdwallet-keepkey-rest/-/hdwallet-keepkey-rest-1.40.4.tgz#85431667b2aace048dba1c675577348ae54739bf"
-  integrity sha512-Skb7FWWV/e+83LsnyZBJzZBOWInWsh3iSh3Lj77qb//0acJtRLhxkaEcqg6t6as40Xw4kCuCKOkXnz9P40mT9A==
+"@keepkey/hdwallet-keepkey-rest@1.40.5":
+  version "1.40.5"
+  resolved "https://registry.yarnpkg.com/@keepkey/hdwallet-keepkey-rest/-/hdwallet-keepkey-rest-1.40.5.tgz#844bfca073fbc6447368c3936ee029d6f946771b"
+  integrity sha512-YgT1SlCvOVH3107JcjrQramU6fPAwu/fh7WV3sAdhjp9dn3Bar+QnRUTtUyCm/sGdpZaftIAHYTF9GaQMueEDw==
   dependencies:
     "@ethereumjs/common" "^2.4.0"
     "@ethereumjs/tx" "^3.3.0"
     "@keepkey/device-protocol" "^7.10.2"
-    "@keepkey/keepkey-sdk" "0.2.13"
+    "@keepkey/keepkey-sdk" "^0.2.14"
     "@shapeshiftoss/bitcoinjs-lib" "5.2.0-shapeshift.2"
     "@shapeshiftoss/hdwallet-core" "1.41.0"
     "@shapeshiftoss/proto-tx-builder" "^0.4.0"
@@ -3608,10 +3608,10 @@
     semver "^6.3.0"
     tiny-secp256k1 "^1.1.6"
 
-"@keepkey/keepkey-sdk@0.2.13":
-  version "0.2.13"
-  resolved "https://registry.yarnpkg.com/@keepkey/keepkey-sdk/-/keepkey-sdk-0.2.13.tgz#88712f7d7a41d9508518a4f7edc3f4fc8c2f3769"
-  integrity sha512-hMlJOinN+azual0JKa7mjSJz271MUTpEAcTsjTAViDHzZL4xwW/HzHVR5RXhRbgHqP2cI4XMftKKHMABd81pBA==
+"@keepkey/keepkey-sdk@^0.2.14":
+  version "0.2.14"
+  resolved "https://registry.yarnpkg.com/@keepkey/keepkey-sdk/-/keepkey-sdk-0.2.14.tgz#1427c5f95a319ec1d209ca9f5f5be06c2658727c"
+  integrity sha512-oywN/h5Ne1WsSERqxvtEStnIDBoQ7ol0wT3C7rxBzvAJpp+UiwjRlfSzLF6+sXRNf6i0DYAxWgwtp2l9umw7lA==
   dependencies:
     "@openapitools/openapi-generator-cli" "^2.5.2"
 
