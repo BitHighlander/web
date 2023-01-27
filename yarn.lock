@@ -3584,10 +3584,10 @@
     google-protobuf "^3.7.0-rc.2"
     pbjs "^0.0.5"
 
-"@keepkey/hdwallet-keepkey-rest@1.40.5":
-  version "1.40.5"
-  resolved "https://registry.yarnpkg.com/@keepkey/hdwallet-keepkey-rest/-/hdwallet-keepkey-rest-1.40.5.tgz#844bfca073fbc6447368c3936ee029d6f946771b"
-  integrity sha512-YgT1SlCvOVH3107JcjrQramU6fPAwu/fh7WV3sAdhjp9dn3Bar+QnRUTtUyCm/sGdpZaftIAHYTF9GaQMueEDw==
+"@keepkey/hdwallet-keepkey-rest@1.40.6":
+  version "1.40.6"
+  resolved "https://registry.yarnpkg.com/@keepkey/hdwallet-keepkey-rest/-/hdwallet-keepkey-rest-1.40.6.tgz#08d866db6e793c7b467cfa2d9645d496f6df282e"
+  integrity sha512-Mnn/sTBHaUBqH608iQAjWMd8Nj/zNO+FIFR/p9XJ0qUYEiUU6G1JM/eUgveY6+FoCdNJixn8gQun6ZoEb6P65A==
   dependencies:
     "@ethereumjs/common" "^2.4.0"
     "@ethereumjs/tx" "^3.3.0"
