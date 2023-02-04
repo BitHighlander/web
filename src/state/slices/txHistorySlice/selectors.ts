@@ -240,6 +240,6 @@ export const selectMaybeNextAccountNumberByChainId = createSelector(
       accountId => !isEmpty(txIdsByAccountId[accountId]),
     )
     const nextAccountNumber = currentHighestAccountNumber + 1
-    return [isAbleToAddNextAccount, isAbleToAddNextAccount ? nextAccountNumber : null]
+    return [isAbleToAddNextAccount, nextAccountNumber]
   },
 )
