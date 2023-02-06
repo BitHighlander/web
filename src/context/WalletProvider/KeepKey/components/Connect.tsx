@@ -6,7 +6,6 @@ import {
   ModalBody,
   ModalHeader,
 } from '@chakra-ui/react'
-import { KeepKeySdk } from '@keepkey/keepkey-sdk'
 import type { Event } from '@shapeshiftoss/hdwallet-core'
 import { useCallback, useState } from 'react'
 import { CircularProgress } from 'components/CircularProgress/CircularProgress'
@@ -19,6 +18,7 @@ import { logger } from 'lib/logger'
 
 import { KeepKeyConfig } from '../config'
 import { FailureType, MessageType } from '../KeepKeyTypes'
+import { setupKeepKeySDK } from '../setupKeepKeySdk'
 
 const moduleLogger = logger.child({ namespace: ['Connect'] })
 
@@ -50,25 +50,6 @@ export const KeepKeyConnect = () => {
   const handleDownloadButtonClick = useCallback(() => {
     dispatch({ type: WalletActions.DOWNLOAD_UPDATER, payload: false })
   }, [dispatch])
-
-  const setupKeepKeySDK = async () => {
-    let serviceKey = window.localStorage.getItem('@app/serviceKey')
-    let config:any = {
-      apiKey: serviceKey,
-      pairingInfo:{
-        name: "ShapeShift",
-        imageUrl:'https://assets.coincap.io/assets/icons/fox@2x.png',
-        basePath:'http://localhost:1646/spec/swagger.json',
-        url:'https://web-theta-one.vercel.app'
-      }
-    }
-    let sdk = await KeepKeySdk.create(config)
-    console.log("config.serviceKey: ",config.serviceKey)
-    if (!serviceKey) {
-      window.localStorage.setItem('@app/serviceKey', config.apiKey)
-    }
-    return sdk
-  }
 
   const pairDevice = async () => {
     setError(null)

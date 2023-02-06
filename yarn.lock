@@ -4240,6 +4240,17 @@
     web-encoding "^1.1.0"
     wif "^2.0.6"
 
+"@shapeshiftoss/hdwallet-core@1.41.0":
+  version "1.41.0"
+  resolved "https://registry.yarnpkg.com/@shapeshiftoss/hdwallet-core/-/hdwallet-core-1.41.0.tgz#8230c7284f475c6f8deb268a0a51fc07e6a0fb33"
+  integrity sha512-4Ke+BvWZBfYx8SYTue1xWyJHAmHtF8oANVayuTW2v0PsSWNcdz+XHmgGN7FJb7r1Ob5W2oY16eSWaXhAHCiLPQ==
+  dependencies:
+    eip-712 "^1.0.0"
+    eventemitter2 "^5.0.1"
+    lodash "^4.17.21"
+    rxjs "^6.4.0"
+    type-assertions "^1.1.0"
+
 "@shapeshiftoss/hdwallet-core@1.42.0", "@shapeshiftoss/hdwallet-core@^1.42.0":
   version "1.42.0"
   resolved "https://registry.yarnpkg.com/@shapeshiftoss/hdwallet-core/-/hdwallet-core-1.42.0.tgz#5585dcbc38cde3210da954cc018630724e83846a"
