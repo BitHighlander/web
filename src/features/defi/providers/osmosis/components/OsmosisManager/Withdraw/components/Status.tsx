@@ -1,5 +1,6 @@
 import { CheckIcon, CloseIcon, ExternalLinkIcon } from '@chakra-ui/icons'
 import { Box, Button, Link, Stack } from '@chakra-ui/react'
+import type { AccountId } from '@shapeshiftoss/caip'
 import { fromAccountId, osmosisAssetId } from '@shapeshiftoss/caip'
 import { Summary } from 'features/defi/components/Summary'
 import { TxStatus } from 'features/defi/components/TxStatus/TxStatus'
@@ -11,29 +12,27 @@ import { useCallback, useContext, useEffect, useMemo } from 'react'
 import { useTranslate } from 'react-polyglot'
 import { Amount } from 'components/Amount/Amount'
 import { AssetIcon } from 'components/AssetIcon'
+import type { StepComponentProps } from 'components/DeFi/components/Steps'
 import { StatusTextEnum } from 'components/RouteSteps/RouteSteps'
 import { Row } from 'components/Row/Row'
 import { RawText, Text } from 'components/Text'
 import { useBrowserRouter } from 'hooks/useBrowserRouter/useBrowserRouter'
-import { bnOrZero } from 'lib/bignumber/bignumber'
-import {
-  selectAssetById,
-  selectFirstAccountIdByChainId,
-  selectMarketDataById,
-  selectTxById,
-} from 'state/slices/selectors'
+import { bn, bnOrZero } from 'lib/bignumber/bignumber'
+import { OSMOSIS_PRECISION } from 'state/slices/opportunitiesSlice/resolvers/osmosis/utils'
+import { selectAssetById, selectMarketDataById, selectTxById } from 'state/slices/selectors'
 import { serializeTxIndex } from 'state/slices/txHistorySlice/utils'
 import { useAppSelector } from 'state/store'
 
 import { WithdrawContext } from '../../Withdraw/WithdrawContext'
 import { OsmosisWithdrawActionType } from '../WithdrawCommon'
 
-export const Status = () => {
+type StatusProps = { accountId: AccountId | undefined } & StepComponentProps
+
+export const Status: React.FC<StatusProps> = ({ accountId }) => {
   const translate = useTranslate()
   const { state, dispatch: contextDispatch } = useContext(WithdrawContext)
-  const { query, history: browserHistory } = useBrowserRouter<DefiQueryParams, DefiParams>()
-  const { chainId } = query
-  const opportunity = state?.opportunity
+  const { history: browserHistory } = useBrowserRouter<DefiQueryParams, DefiParams>()
+  const osmosisOpportunity = state?.opportunity
 
   const feeAsset = useAppSelector(state => selectAssetById(state, osmosisAssetId))
   if (!feeAsset) throw new Error(`Fee asset not found for AssetId ${osmosisAssetId}`)
@@ -42,21 +41,20 @@ export const Status = () => {
   )
 
   const underlyingAsset0 = useAppSelector(state =>
-    selectAssetById(state, opportunity?.underlyingAssetIds[0] ?? ''),
+    selectAssetById(state, osmosisOpportunity?.underlyingAssetIds[0] ?? ''),
   )
   const underlyingAsset1 = useAppSelector(state =>
-    selectAssetById(state, opportunity?.underlyingAssetIds[1] ?? ''),
+    selectAssetById(state, osmosisOpportunity?.underlyingAssetIds[1] ?? ''),
   )
   if (!underlyingAsset0)
-    throw new Error(`Asset not found for AssetId ${opportunity?.underlyingAssetIds[0]}`)
+    throw new Error(`Asset not found for AssetId ${osmosisOpportunity?.underlyingAssetIds[0]}`)
   if (!underlyingAsset1)
-    throw new Error(`Asset not found for AssetId ${opportunity?.underlyingAssetIds[1]}`)
+    throw new Error(`Asset not found for AssetId ${osmosisOpportunity?.underlyingAssetIds[1]}`)
 
-  // user info
-  const accountId = useAppSelector(state => selectFirstAccountIdByChainId(state, chainId))
   const userAddress = useMemo(() => accountId && fromAccountId(accountId).account, [accountId])
 
   const serializedTxIndex = useMemo(() => {
+    // TODO:pastaghost): refactor to eliminate userAddress parameter
     if (!(state?.txid && userAddress && accountId)) return ''
     return serializeTxIndex(accountId, state.txid, userAddress)
   }, [state?.txid, userAddress, accountId])
@@ -82,7 +80,7 @@ export const Status = () => {
     browserHistory.goBack()
   }, [browserHistory])
 
-  if (!state || !opportunity) return null
+  if (!state || !osmosisOpportunity) return null
 
   const { statusIcon, statusText, statusBg, statusBody } = (() => {
     switch (state.withdraw.txStatus) {
@@ -91,7 +89,7 @@ export const Status = () => {
           statusText: StatusTextEnum.success,
           statusIcon: <CheckIcon color='white' />,
           statusBody: translate('modals.withdraw.status.success', {
-            opportunity: opportunity?.name,
+            opportunity: osmosisOpportunity?.name,
           }),
           statusBg: 'green.500',
         }
@@ -122,7 +120,7 @@ export const Status = () => {
       statusBody={statusBody}
       statusBg={statusBg}
       continueText='modals.status.position'
-      pairIcons={opportunity?.icons}
+      pairIcons={osmosisOpportunity?.icons}
     >
       <Summary spacing={0} mx={6} mb={4}>
         <Row variant='vert-gutter'>
@@ -136,7 +134,9 @@ export const Status = () => {
             </Stack>
             <Row.Value>
               <Amount.Crypto
-                value={state.withdraw.underlyingAsset0.amount}
+                value={bnOrZero(state.withdraw.underlyingAsset0.amount)
+                  .dividedBy(bn(10).pow(underlyingAsset0.precision))
+                  .toString()}
                 symbol={underlyingAsset0.symbol}
               />
             </Row.Value>
@@ -148,7 +148,9 @@ export const Status = () => {
             </Stack>
             <Row.Value>
               <Amount.Crypto
-                value={state.withdraw.underlyingAsset1.amount}
+                value={bnOrZero(state.withdraw.underlyingAsset1.amount)
+                  .dividedBy(bn(10).pow(underlyingAsset1.precision))
+                  .toString()}
                 symbol={underlyingAsset1.symbol}
               />
             </Row.Value>
@@ -169,9 +171,9 @@ export const Status = () => {
               <Amount.Fiat
                 fontWeight='bold'
                 value={bnOrZero(
-                  state.withdraw.txStatus === 'pending'
-                    ? state.withdraw.estimatedFeeCrypto
-                    : state.withdraw.usedGasFee,
+                  bnOrZero(state?.withdraw?.estimatedFeeCryptoBaseUnit)
+                    .dividedBy(bn(10).pow(OSMOSIS_PRECISION))
+                    .toString(),
                 )
                   .times(feeAssetMarketData.price)
                   .toFixed(2)}
@@ -179,11 +181,11 @@ export const Status = () => {
               <Amount.Crypto
                 color='gray.500'
                 value={bnOrZero(
-                  state.withdraw.txStatus === 'pending'
-                    ? state.withdraw.estimatedFeeCrypto
-                    : state.withdraw.usedGasFee,
+                  bnOrZero(state?.withdraw?.estimatedFeeCryptoBaseUnit)
+                    .dividedBy(bn(10).pow(OSMOSIS_PRECISION))
+                    .toString(),
                 ).toFixed(5)}
-                symbol='ETH'
+                symbol={feeAsset.symbol}
               />
             </Box>
           </Row.Value>

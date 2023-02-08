@@ -1,7 +1,13 @@
 import { useToast } from '@chakra-ui/react'
 import type { Asset } from '@shapeshiftoss/asset-service'
 import type { AccountId } from '@shapeshiftoss/caip'
-import { ASSET_REFERENCE, fromAccountId, fromAssetId, toAssetId } from '@shapeshiftoss/caip'
+import {
+  ASSET_NAMESPACE,
+  ASSET_REFERENCE,
+  fromAccountId,
+  fromAssetId,
+  toAssetId,
+} from '@shapeshiftoss/caip'
 import type { CosmosSdkBaseAdapter, CosmosSdkChainId } from '@shapeshiftoss/chain-adapters'
 import type { DepositValues } from 'features/defi/components/Deposit/PairDeposit'
 import { PairDepositWithAllocation } from 'features/defi/components/Deposit/PairDepositWithAllocation'
@@ -11,22 +17,28 @@ import type {
 } from 'features/defi/contexts/DefiManagerProvider/DefiCommon'
 import { DefiAction, DefiStep } from 'features/defi/contexts/DefiManagerProvider/DefiCommon'
 import qs from 'qs'
-import { useCallback, useContext, useMemo } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useTranslate } from 'react-polyglot'
 import { useHistory } from 'react-router-dom'
 import type { AccountDropdownProps } from 'components/AccountDropdown/AccountDropdown'
 import type { StepComponentProps } from 'components/DeFi/components/Steps'
 import { getChainAdapterManager } from 'context/PluginProvider/chainAdapterSingleton'
 import { useBrowserRouter } from 'hooks/useBrowserRouter/useBrowserRouter'
-import { bn, bnOrZero } from 'lib/bignumber/bignumber'
+import { BigNumber, bn, bnOrZero } from 'lib/bignumber/bignumber'
 import { logger } from 'lib/logger'
 import { useFindByAssetIdQuery } from 'state/slices/marketDataSlice/marketDataSlice'
-import { OSMOSIS_PRECISION } from 'state/slices/opportunitiesSlice/resolvers/osmosis/utils'
+import type { OsmosisPool } from 'state/slices/opportunitiesSlice/resolvers/osmosis/utils'
+import {
+  getPool,
+  getPoolIdFromAssetReference,
+} from 'state/slices/opportunitiesSlice/resolvers/osmosis/utils'
 import { selectAssetById, selectPortfolioCryptoBalanceByFilter } from 'state/slices/selectors'
 import { useAppSelector } from 'state/store'
 
 import { OsmosisDepositActionType } from '../DepositCommon'
 import { DepositContext } from '../DepositContext'
+
+const DEFAULT_SLIPPAGE = '0.001' // Allow for 0.1% slippage. TODO(pastaghost): is there a better way to do this?
 
 const moduleLogger = logger.child({
   namespace: ['DeFi', 'Providers', 'Osmosis', 'Deposit', 'Deposit'],
@@ -46,8 +58,9 @@ export const Deposit: React.FC<DepositProps> = ({
   const history = useHistory()
   const translate = useTranslate()
   const { query, history: browserHistory } = useBrowserRouter<DefiQueryParams, DefiParams>()
+  const [poolData, setPoolData] = useState<OsmosisPool | undefined>(undefined)
   const { chainId, assetNamespace, assetReference } = query
-  const opportunity = state?.opportunity
+  const osmosisOpportunity = state?.opportunity
 
   const assetId = toAssetId({
     chainId,
@@ -55,22 +68,22 @@ export const Deposit: React.FC<DepositProps> = ({
     assetReference,
   })
 
-  const asset: Asset | undefined = useAppSelector(state => selectAssetById(state, assetId))
-
-  const underlyingAsset0Id = opportunity?.underlyingAssetIds[0] || ''
-  const underlyingAsset1Id = opportunity?.underlyingAssetIds[1] || ''
-  const underlyingAsset0 = useAppSelector(state => selectAssetById(state, underlyingAsset0Id))
-  const underlyingAsset1 = useAppSelector(state => selectAssetById(state, underlyingAsset1Id))
+  const underlyingAsset0 = useAppSelector(state =>
+    selectAssetById(state, osmosisOpportunity?.underlyingAssetIds[0] ?? ''),
+  )
+  const underlyingAsset1 = useAppSelector(state =>
+    selectAssetById(state, osmosisOpportunity?.underlyingAssetIds[1] ?? ''),
+  )
 
   const underlyingAsset0Balance = useAppSelector(state =>
     selectPortfolioCryptoBalanceByFilter(state, {
-      assetId: opportunity?.underlyingAssetIds[0],
+      assetId: osmosisOpportunity?.underlyingAssetIds[0],
       accountId: accountId ?? '',
     }),
   )
   const underlyingAsset1Balance = useAppSelector(state =>
     selectPortfolioCryptoBalanceByFilter(state, {
-      assetId: opportunity?.underlyingAssetIds[1],
+      assetId: osmosisOpportunity?.underlyingAssetIds[1],
       accountId: accountId ?? '',
     }),
   )
@@ -81,14 +94,12 @@ export const Deposit: React.FC<DepositProps> = ({
   const { data: underlyingAsset1Data } = useFindByAssetIdQuery(underlyingAsset1?.assetId || '')
   const underlyingAsset1MarketData = underlyingAsset1Data?.[underlyingAsset1?.assetId || '']
 
-  // user info
   const userAddress = useMemo(() => accountId && fromAccountId(accountId).account, [accountId])
-
-  // notify
   const toast = useToast()
 
   const getDepositFeeEstimate = useCallback(async (): Promise<string | undefined> => {
-    if (!(contextDispatch && userAddress && assetReference && accountId && opportunity)) return
+    if (!(contextDispatch && userAddress && assetReference && accountId && osmosisOpportunity))
+      return
     try {
       const chainAdapters = getChainAdapterManager()
       const adapter = chainAdapters.get(
@@ -100,10 +111,7 @@ export const Deposit: React.FC<DepositProps> = ({
         })
       ).fast.txFee
 
-      const fastFeeCryptoPrecision = bnOrZero(
-        bn(fastFeeCryptoBaseUnit).div(bn(10).pow(asset?.precision ?? 0)),
-      )
-      return bnOrZero(fastFeeCryptoPrecision).toString()
+      return bnOrZero(fastFeeCryptoBaseUnit).toString()
     } catch (error) {
       moduleLogger.error(
         { fn: 'getDepositFeeEstimate', error },
@@ -123,8 +131,7 @@ export const Deposit: React.FC<DepositProps> = ({
     userAddress,
     assetReference,
     accountId,
-    opportunity,
-    asset,
+    osmosisOpportunity,
     chainId,
     toast,
     translate,
@@ -140,101 +147,111 @@ export const Deposit: React.FC<DepositProps> = ({
   const calculateAllocations = useCallback(
     (
       inputAsset: Asset,
-      inputAssetAmount: string,
-    ): { allocationFraction: string; shareOutAmount: { baseUnits: string; decimal: string } } => {
-      const ret = { allocationFraction: '0', shareOutAmount: { baseUnits: '0', decimal: '0' } }
-      if (!state || !state.poolData) {
-        return ret
+      inputAssetAmountPrecision: string,
+    ): { allocationFraction: string; shareOutAmountBaseUnit: string } | undefined => {
+      if (!(state && state.opportunity?.assetId)) {
+        return undefined
       }
-      const poolAssets = state?.poolData?.pool_assets
+
+      if (!poolData) return undefined
+
+      const poolTotalSharesBaseUnit = poolData.total_shares?.amount
+      if (!poolTotalSharesBaseUnit) {
+        moduleLogger.error(`Could not get total shares for pool ${poolData.id}`)
+        return undefined
+      }
+
+      const poolAssets = poolData.pool_assets
 
       let { assetReference: inputAssetReference } = fromAssetId(inputAsset.assetId)
       if (inputAssetReference === ASSET_REFERENCE.Osmosis) inputAssetReference = 'uosmo'
 
-      if (!poolAssets) return ret
+      if (!poolAssets) return undefined
       const poolAssetIndex = poolAssets.findIndex(asset =>
         asset.token.denom.toLowerCase().includes(inputAssetReference.toLowerCase()),
       )
-      if (poolAssetIndex < 0) return ret
+      if (poolAssetIndex < 0) return undefined
 
-      const poolTotalShares = state?.poolData?.total_shares?.amount
-      if (!poolTotalShares) {
-        moduleLogger.error(`Could not get total shares for pool ${state?.poolData?.id}`)
-        return ret
-      }
-
-      const poolAssetAmount = poolAssets[poolAssetIndex]?.token.amount
-      const poolAssetWeight = poolAssets[poolAssetIndex]?.weight
-      const totalPoolWeight = state?.poolData?.total_weight
-
-      const weightMultiplier = bnOrZero(poolAssetWeight).div(bnOrZero(totalPoolWeight))
-      const inputAmountFullPrecision = bnOrZero(inputAssetAmount)
-        .multipliedBy(bn(10).pow(inputAsset.precision ?? 0))
-        .multipliedBy(weightMultiplier)
-
-      if (bnOrZero(poolAssetAmount).eq(bn(0))) return ret
-      const allocationFraction = inputAmountFullPrecision
-        .div(bnOrZero(poolAssetAmount).plus(inputAmountFullPrecision))
+      const inputAssetAmountBaseUnit = bnOrZero(inputAssetAmountPrecision)
+        .multipliedBy(bn(10).pow(bnOrZero(inputAsset.precision)))
         .toString()
 
-      const shareOutAmount = bnOrZero(allocationFraction)
-        .multipliedBy(bnOrZero(poolTotalShares))
-        .toFixed(0)
-        .toString()
-      const shareOutAmountDecimal = bnOrZero(shareOutAmount)
-        .dividedBy(bn(10).pow(OSMOSIS_PRECISION))
-        .toFixed(0)
+      const poolAssetAmountBaseUnit = poolAssets[poolAssetIndex]?.token.amount
+
+      if (bnOrZero(poolAssetAmountBaseUnit).eq(bn(0))) return undefined
+
+      /** allocation_fraction = input_asset_amount / (pool_asset_amount + pool_asset_amount)
+       * This represents the fraction of the pool that the user will own after once the liquiditt
+       * has been provided
+       */
+      const allocationFraction = bnOrZero(inputAssetAmountBaseUnit)
+        .div(bnOrZero(poolAssetAmountBaseUnit).plus(inputAssetAmountBaseUnit))
         .toString()
 
-      ret.allocationFraction = allocationFraction
-      ret.shareOutAmount = {
-        baseUnits: shareOutAmount,
-        decimal: shareOutAmountDecimal,
-      }
-      return ret
+      /** share_out_amount = total_pool_shares * (input_asset_amount / pool_asset_amount)
+       * This represents the number of pool shares that the user will receive in exchange
+       * for the provided liquidity
+       */
+      const shareOutAmountBaseUnit = bnOrZero(poolTotalSharesBaseUnit)
+        .multipliedBy(
+          bnOrZero(inputAssetAmountBaseUnit).dividedBy(bnOrZero(poolAssetAmountBaseUnit)),
+        )
+        .multipliedBy(bn(1).minus(bnOrZero(DEFAULT_SLIPPAGE)))
+        .toFixed(0, BigNumber.ROUND_DOWN)
+        .toString()
+
+      return { allocationFraction, shareOutAmountBaseUnit }
     },
-    [state],
+    [poolData, state],
   )
 
   const handleContinue = useCallback(
     async (formValues: DepositValues) => {
-      if (
-        !(
-          state &&
-          contextDispatch &&
-          userAddress &&
-          opportunity &&
-          underlyingAsset0 &&
-          underlyingAsset1
-        )
-      )
+      if (!(state && contextDispatch && osmosisOpportunity && underlyingAsset0 && underlyingAsset1))
         return
+
+      const allocations = await calculateAllocations(underlyingAsset0, formValues.cryptoAmount1)
+      if (!allocations) return
+
+      const asset0AmountBaseUnit = bnOrZero(formValues.cryptoAmount1)
+        .multipliedBy(bn(10).pow(bnOrZero(underlyingAsset0.precision)))
+        .toString()
+
+      const asset1AmountBaseUnit = bnOrZero(formValues.cryptoAmount2)
+        .multipliedBy(bn(10).pow(bnOrZero(underlyingAsset1.precision)))
+        .toString()
+
+      const asset0Reference = fromAssetId(underlyingAsset0.assetId).assetReference
+      const asset1Reference = fromAssetId(underlyingAsset1.assetId).assetReference
 
       // set deposit state for future use
       contextDispatch({
         type: OsmosisDepositActionType.SET_DEPOSIT,
         payload: {
           underlyingAsset0: {
-            amount: formValues.cryptoAmount1,
-            denom: fromAssetId(underlyingAsset0.assetId).assetReference,
-            fiatAmount: formValues.fiatAmount1,
+            amount: asset0AmountBaseUnit,
+            denom:
+              asset0Reference === ASSET_REFERENCE.Osmosis
+                ? 'uosmo'
+                : `${ASSET_NAMESPACE.ibc}/${asset0Reference}`,
           },
           underlyingAsset1: {
-            amount: formValues.cryptoAmount2,
-            denom: fromAssetId(underlyingAsset1.assetId).assetReference,
-            fiatAmount: formValues.cryptoAmount2,
+            amount: asset1AmountBaseUnit,
+            denom:
+              asset1Reference === ASSET_REFERENCE.Osmosis
+                ? 'uosmo'
+                : `${ASSET_NAMESPACE.ibc}/${asset1Reference}`,
           },
-          shareOutAmount: calculateAllocations(underlyingAsset0, formValues.fiatAmount1)
-            .shareOutAmount.baseUnits,
+          shareOutAmountBaseUnit: allocations.shareOutAmountBaseUnit,
         },
       })
       contextDispatch({ type: OsmosisDepositActionType.SET_LOADING, payload: true })
       try {
-        const estimatedFeeCrypto = await getDepositFeeEstimate()
-        if (!estimatedFeeCrypto) return
+        const estimatedFeeCryptoBaseUnit = await getDepositFeeEstimate()
+        if (!estimatedFeeCryptoBaseUnit) return
         contextDispatch({
           type: OsmosisDepositActionType.SET_DEPOSIT,
-          payload: { estimatedFeeCrypto },
+          payload: { estimatedFeeCryptoBaseUnit },
         })
         onNext(DefiStep.Confirm)
         contextDispatch({ type: OsmosisDepositActionType.SET_LOADING, payload: false })
@@ -252,8 +269,7 @@ export const Deposit: React.FC<DepositProps> = ({
     [
       state,
       contextDispatch,
-      userAddress,
-      opportunity,
+      osmosisOpportunity,
       underlyingAsset0,
       underlyingAsset1,
       calculateAllocations,
@@ -264,9 +280,20 @@ export const Deposit: React.FC<DepositProps> = ({
     ],
   )
 
-  const handleCancel = useCallback(() => {
-    browserHistory.goBack()
-  }, [browserHistory])
+  useEffect(() => {
+    // Fetch pool data
+    ;(async () => {
+      if (!(state && state.opportunity)) return undefined
+
+      const { assetReference: poolAssetReference } = fromAssetId(state.opportunity.assetId)
+      const id = getPoolIdFromAssetReference(poolAssetReference)
+      if (!id) return undefined
+
+      if (!poolData) setPoolData(await getPool(id))
+    })()
+  }, [poolData, state])
+
+  const handleCancel = browserHistory.goBack
 
   const handleBack = useCallback(() => {
     history.push({
@@ -280,10 +307,10 @@ export const Deposit: React.FC<DepositProps> = ({
 
   if (
     !(
-      asset &&
+      assetId &&
       state &&
       contextDispatch &&
-      opportunity &&
+      osmosisOpportunity &&
       underlyingAsset0 &&
       underlyingAsset1 &&
       underlyingAsset0MarketData &&
@@ -294,9 +321,9 @@ export const Deposit: React.FC<DepositProps> = ({
   }
 
   const validateCryptoAmount = (value: string, isForAsset1: boolean) => {
-    const crypto = bnOrZero(isForAsset1 ? underlyingAsset1Balance : underlyingAsset0Balance).div(
-      `1e+${(isForAsset1 ? underlyingAsset1 : underlyingAsset0).precision}`,
-    )
+    const crypto = bnOrZero(
+      isForAsset1 ? underlyingAsset0Balance : underlyingAsset1Balance,
+    ).dividedBy(bn(10).pow((isForAsset1 ? underlyingAsset0 : underlyingAsset1).precision ?? '0'))
     const _value = bnOrZero(value)
     const hasValidBalance = crypto.gt(0) && _value.gt(0) && crypto.gte(value)
     if (_value.isEqualTo(0)) return ''
@@ -304,11 +331,11 @@ export const Deposit: React.FC<DepositProps> = ({
   }
 
   const validateFiatAmount = (value: string, isForAsset1: boolean) => {
-    const crypto = bnOrZero(isForAsset1 ? underlyingAsset1Balance : underlyingAsset0Balance).div(
-      `1e+${(isForAsset1 ? underlyingAsset1 : underlyingAsset0).precision}`,
+    const crypto = bnOrZero(isForAsset1 ? underlyingAsset0Balance : underlyingAsset1Balance).div(
+      bn(10).pow((isForAsset1 ? underlyingAsset0 : underlyingAsset1).precision),
     )
     const fiat = crypto.times(
-      (isForAsset1 ? underlyingAsset1MarketData : underlyingAsset0MarketData).price,
+      (isForAsset1 ? underlyingAsset0MarketData : underlyingAsset1MarketData).price,
     )
     const _value = bnOrZero(value)
     const hasValidBalance = fiat.gt(0) && _value.gt(0) && fiat.gte(value)
@@ -316,30 +343,12 @@ export const Deposit: React.FC<DepositProps> = ({
     return hasValidBalance || 'common.insufficientFunds'
   }
 
-  const underlyingAsset0CryptoAmountAvailable = bnOrZero(underlyingAsset0Balance).div(
-    bn(10).pow(underlyingAsset0.precision),
-  )
-  const underlyingAsset0FiatAmountAvailable = bnOrZero(underlyingAsset0CryptoAmountAvailable).times(
-    underlyingAsset0MarketData.price,
-  )
-  const underlyingAsset1CryptoAmountAvailable = bnOrZero(underlyingAsset1Balance).div(
-    bn(10).pow(underlyingAsset1.precision),
-  )
-  const underlyingAsset1FiatAmountAvailable = bnOrZero(underlyingAsset1CryptoAmountAvailable).times(
-    underlyingAsset1MarketData.price,
-  )
-
   return (
     <PairDepositWithAllocation
       accountId={accountId}
-      asset1={underlyingAsset0}
-      asset2={underlyingAsset1}
-      icons={opportunity?.icons}
-      destAsset={asset}
-      apy={opportunity?.apy?.toString() ?? ''}
+      opportunity={osmosisOpportunity}
+      destAssetId={assetId}
       calculateAllocations={calculateAllocations}
-      cryptoAmountAvailable1={underlyingAsset0CryptoAmountAvailable.toPrecision()}
-      cryptoAmountAvailable2={underlyingAsset1CryptoAmountAvailable.toPrecision()}
       cryptoInputValidation1={{
         required: true,
         validate: { validateCryptoAmount1: (val: string) => validateCryptoAmount(val, true) },
@@ -348,8 +357,6 @@ export const Deposit: React.FC<DepositProps> = ({
         required: true,
         validate: { validateCryptoAmount2: (val: string) => validateCryptoAmount(val, false) },
       }}
-      fiatAmountAvailable1={underlyingAsset0FiatAmountAvailable.toFixed(2)}
-      fiatAmountAvailable2={underlyingAsset1FiatAmountAvailable.toFixed(2)}
       fiatInputValidation1={{
         required: true,
         validate: { validateFiatAmount1: (val: string) => validateFiatAmount(val, true) },
@@ -358,8 +365,6 @@ export const Deposit: React.FC<DepositProps> = ({
         required: true,
         validate: { validateFiatAmount2: (val: string) => validateFiatAmount(val, false) },
       }}
-      marketData1={underlyingAsset0MarketData}
-      marketData2={underlyingAsset1MarketData}
       onCancel={handleCancel}
       onAccountIdChange={handleAccountIdChange}
       onContinue={handleContinue}
