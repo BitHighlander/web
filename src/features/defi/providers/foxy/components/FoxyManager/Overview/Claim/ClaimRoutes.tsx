@@ -1,35 +1,16 @@
 import type { AccountId } from '@shapeshiftoss/caip'
-import { ethChainId, toAssetId } from '@shapeshiftoss/caip'
-import type {
-  DefiParams,
-  DefiQueryParams,
-} from 'features/defi/contexts/DefiManagerProvider/DefiCommon'
+import { ethChainId } from '@shapeshiftoss/caip'
+import { useFoxyQuery } from 'features/defi/providers/foxy/components/FoxyManager/useFoxyQuery'
 import { AnimatePresence } from 'framer-motion'
 import { useMemo } from 'react'
 import { Route, Switch, useLocation } from 'react-router'
 import { SlideTransition } from 'components/SlideTransition'
-import { useBrowserRouter } from 'hooks/useBrowserRouter/useBrowserRouter'
 import { useFoxyBalances } from 'pages/Defi/hooks/useFoxyBalances'
-import type { StakingId } from 'state/slices/opportunitiesSlice/types'
-import {
-  selectBIP44ParamsByAccountId,
-  selectFirstAccountIdByChainId,
-  selectStakingOpportunitiesById,
-} from 'state/slices/selectors'
+import { selectBIP44ParamsByAccountId, selectFirstAccountIdByChainId } from 'state/slices/selectors'
 import { useAppSelector } from 'state/store'
 
 import { ClaimConfirm } from './ClaimConfirm'
 import { ClaimStatus } from './ClaimStatus'
-
-enum OverviewPath {
-  Claim = '/',
-  ClaimStatus = '/status',
-}
-
-export const routes = [
-  { step: 0, path: OverviewPath.Claim, label: 'Confirm' },
-  { step: 1, path: OverviewPath.ClaimStatus, label: 'Status' },
-]
 
 type ClaimRouteProps = {
   accountId: AccountId | undefined
@@ -37,19 +18,7 @@ type ClaimRouteProps = {
 }
 
 export const ClaimRoutes: React.FC<ClaimRouteProps> = ({ onBack, accountId }) => {
-  const { query } = useBrowserRouter<DefiQueryParams, DefiParams>()
-  const { chainId, assetReference: contractAddress, assetNamespace } = query
-  const contractAssetId = toAssetId({ chainId, assetNamespace, assetReference: contractAddress })
-  const opportunitiesMetadata = useAppSelector(state => selectStakingOpportunitiesById(state))
-
-  const opportunityMetadata = useMemo(
-    () => opportunitiesMetadata[contractAssetId as StakingId],
-    [contractAssetId, opportunitiesMetadata],
-  )
-
-  // Staking Asset Info
-  // The Staking asset is one of the only underlying Asset Ids FOX
-  const stakingAssetId = opportunityMetadata?.underlyingAssetIds[0] ?? ''
+  const { contractAddress, stakingAssetId, chainId, contractAssetId } = useFoxyQuery()
 
   const accountFilter = useMemo(() => ({ accountId: accountId ?? '' }), [accountId])
   const bip44Params = useAppSelector(state => selectBIP44ParamsByAccountId(state, accountFilter))

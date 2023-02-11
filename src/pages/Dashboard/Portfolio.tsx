@@ -10,20 +10,20 @@ import {
 } from '@chakra-ui/react'
 import type { HistoryTimeframe } from '@shapeshiftoss/types'
 import { DEFAULT_HISTORY_TIMEFRAME } from 'constants/Config'
-import { useCallback, useState } from 'react'
-import { useSelector } from 'react-redux'
+import { useCallback, useMemo, useState } from 'react'
 import { Amount } from 'components/Amount/Amount'
 import { BalanceChart } from 'components/BalanceChart/BalanceChart'
 import { Card } from 'components/Card/Card'
 import { TimeControls } from 'components/Graph/TimeControls'
 import { MaybeChartUnavailable } from 'components/MaybeChartUnavailable'
 import { Text } from 'components/Text'
+import { bnOrZero } from 'lib/bignumber/bignumber'
 import { EligibleCarousel } from 'pages/Defi/components/EligibleCarousel'
+import { useEarnBalances } from 'pages/Defi/hooks/useEarnBalances'
 import {
-  selectFeatureFlags,
   selectPortfolioAssetIds,
   selectPortfolioLoading,
-  selectPortfolioTotalFiatBalanceWithStakingData,
+  selectPortfolioTotalFiatBalanceExcludeEarnDupes,
 } from 'state/slices/selectors'
 import { useAppSelector } from 'state/store'
 
@@ -31,13 +31,21 @@ import { AccountTable } from './components/AccountList/AccountTable'
 import { PortfolioBreakdown } from './PortfolioBreakdown'
 
 export const Portfolio = () => {
-  const { EligibleEarn } = useSelector(selectFeatureFlags)
   const [timeframe, setTimeframe] = useState<HistoryTimeframe>(DEFAULT_HISTORY_TIMEFRAME)
   const [percentChange, setPercentChange] = useState(0)
 
   const assetIds = useAppSelector(selectPortfolioAssetIds)
 
-  const totalBalance = useAppSelector(selectPortfolioTotalFiatBalanceWithStakingData)
+  // TODO(gomes): This goes away in a follow-up PR
+  // - FOXy balances are now the only effective reason we have a useEarnBalances() hook, and a selector should be able to get that
+  // - Once useEarnBalances() is removed, we should be able to properly get earn balances from selector, meaning the total balance will accurately be
+  // the same as the addition below
+  const earnBalances = useEarnBalances()
+  const portfolioTotalFiatBalance = useAppSelector(selectPortfolioTotalFiatBalanceExcludeEarnDupes)
+  const totalBalance = useMemo(
+    () => bnOrZero(earnBalances.totalEarningBalance).plus(portfolioTotalFiatBalance).toFixed(),
+    [earnBalances.totalEarningBalance, portfolioTotalFiatBalance],
+  )
 
   const loading = useAppSelector(selectPortfolioLoading)
   const isLoaded = !loading
@@ -109,7 +117,7 @@ export const Portfolio = () => {
       </Card>
       <MaybeChartUnavailable assetIds={assetIds} />
       <PortfolioBreakdown />
-      {EligibleEarn && <EligibleCarousel display={{ base: 'flex', md: 'none' }} />}
+      <EligibleCarousel display={{ base: 'flex', md: 'none' }} />
       <Card>
         <Card.Header>
           <Card.Heading>

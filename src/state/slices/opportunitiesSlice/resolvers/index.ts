@@ -1,6 +1,11 @@
 import { DefiProvider, DefiType } from 'features/defi/contexts/DefiManagerProvider/DefiCommon'
 
 import {
+  cosmosSdkOpportunityIdsResolver,
+  cosmosSdkStakingOpportunitiesMetadataResolver,
+  cosmosSdkStakingOpportunitiesUserDataResolver,
+} from './cosmosSdk'
+import {
   foxFarmingLpMetadataResolver,
   foxFarmingLpOpportunityIdsResolver,
   foxFarmingLpUserDataResolver,
@@ -45,6 +50,9 @@ export const DefiProviderToOpportunitiesMetadataResolverByDeFiType = {
   [`${DefiProvider.Idle}`]: {
     [`${DefiType.Staking}`]: idleStakingOpportunitiesMetadataResolver,
   },
+  [`${DefiProvider.Cosmos}`]: {
+    [`${DefiType.Staking}`]: cosmosSdkStakingOpportunitiesMetadataResolver,
+  },
   [`${DefiProvider.Yearn}`]: {
     [`${DefiType.Staking}`]: yearnStakingOpportunitiesMetadataResolver,
   },
@@ -72,6 +80,9 @@ export const DefiProviderToOpportunitiesUserDataResolverByDeFiType = {
   [`${DefiProvider.ThorchainSavers}`]: {
     [`${DefiType.Staking}`]: thorchainSaversStakingOpportunitiesUserDataResolver,
   },
+  [`${DefiProvider.Cosmos}`]: {
+    [`${DefiType.Staking}`]: cosmosSdkStakingOpportunitiesUserDataResolver,
+  },
 }
 
 export const DefiProviderToOpportunityIdsResolverByDeFiType = {
@@ -93,6 +104,9 @@ export const DefiProviderToOpportunityIdsResolverByDeFiType = {
   },
   [`${DefiProvider.ShapeShift}`]: {
     [`${DefiType.Staking}`]: foxyStakingOpportunityIdsResolver,
+  },
+  [`${DefiProvider.Cosmos}`]: {
+    [`${DefiType.Staking}`]: cosmosSdkOpportunityIdsResolver,
   },
 }
 
