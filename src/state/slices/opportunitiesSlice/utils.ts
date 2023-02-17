@@ -1,16 +1,19 @@
-import type { AccountId } from '@shapeshiftoss/caip'
+import type { Asset } from '@shapeshiftoss/asset-service'
+import type { AccountId, AssetId } from '@shapeshiftoss/caip'
 import { toAccountId, toAssetId } from '@shapeshiftoss/caip'
 import type { BN } from '@shapeshiftoss/investor-foxy'
 import { bnOrZero } from '@shapeshiftoss/investor-foxy'
 import { bn } from 'lib/bignumber/bignumber'
 
-import { STAKING_ID_DELIMITER } from './constants'
+import { foxEthAssetIds, STAKING_ID_DELIMITER } from './constants'
 import type {
   CosmosSdkStakingSpecificUserStakingOpportunity,
   UserUndelegation,
 } from './resolvers/cosmosSdk/types'
+import type { FoxySpecificUserStakingOpportunity } from './resolvers/foxy/types'
 import type {
   OpportunityId,
+  OpportunityMetadata,
   StakingEarnOpportunityType,
   StakingId,
   UserStakingId,
@@ -56,12 +59,13 @@ export const toOpportunityId = (...[args]: Parameters<typeof toAssetId>) =>
 export const toValidatorId = (...[args]: Parameters<typeof toAccountId>) =>
   toAccountId(args) as ValidatorId
 
-export const isCosmosUserStaking = (
+export const supportsUndelegations = (
   userStakingOpportunity: Partial<UserStakingOpportunity>,
-): userStakingOpportunity is CosmosSdkStakingSpecificUserStakingOpportunity =>
-  'undelegations' in userStakingOpportunity
+): userStakingOpportunity is
+  | CosmosSdkStakingSpecificUserStakingOpportunity
+  | FoxySpecificUserStakingOpportunity => 'undelegations' in userStakingOpportunity
 
-export const makeTotalCosmosSdkUndelegationsCryptoBaseUnit = (undelegations: UserUndelegation[]) =>
+export const makeTotalUndelegationsCryptoBaseUnit = (undelegations: UserUndelegation[]) =>
   undelegations.reduce((a, { undelegationAmountCryptoBaseUnit: b }) => a.plus(b), bn(0))
 
 export const makeTotalCosmosSdkBondingsCryptoBaseUnit = (
@@ -70,8 +74,8 @@ export const makeTotalCosmosSdkBondingsCryptoBaseUnit = (
   bnOrZero(userStakingOpportunity?.stakedAmountCryptoBaseUnit)
     .plus(userStakingOpportunity?.rewardsAmountsCryptoBaseUnit?.[0] ?? 0)
     .plus(
-      makeTotalCosmosSdkUndelegationsCryptoBaseUnit([
-        ...(isCosmosUserStaking(userStakingOpportunity)
+      makeTotalUndelegationsCryptoBaseUnit([
+        ...(supportsUndelegations(userStakingOpportunity)
           ? userStakingOpportunity.undelegations
           : []),
       ]),
@@ -85,8 +89,8 @@ export const isActiveStakingOpportunity = (
     bn(rewardsAmount).gt(0),
   )
   // Defaults to 0 for non-Cosmos-Sdk opportunities
-  const hasActiveUndelegations = makeTotalCosmosSdkUndelegationsCryptoBaseUnit([
-    ...(isCosmosUserStaking(userStakingOpportunity) ? userStakingOpportunity.undelegations : []),
+  const hasActiveUndelegations = makeTotalUndelegationsCryptoBaseUnit([
+    ...(supportsUndelegations(userStakingOpportunity) ? userStakingOpportunity.undelegations : []),
   ]).gt(0)
 
   return hasActiveStaking || hasRewards || hasActiveUndelegations
@@ -95,3 +99,18 @@ export const isActiveStakingOpportunity = (
 export const isActiveStakingEarnOpportunity = (
   earnUserStakingOpportunity: StakingEarnOpportunityType,
 ): boolean => isActiveStakingOpportunity(earnUserStakingOpportunity as UserStakingOpportunity)
+export const isFoxEthStakingAssetId = (assetId: AssetId) => foxEthAssetIds.includes(assetId)
+
+// Returns either
+// - underlying asset icons
+// - opportunity metadata icon e.g the Cosmos SDK validator icon
+export const makeOpportunityIcons = ({
+  opportunity,
+  assets,
+}: {
+  opportunity: OpportunityMetadata | UserStakingOpportunityWithMetadata
+  assets: Partial<Record<AssetId, Asset>>
+}) =>
+  opportunity.icon
+    ? [opportunity.icon]
+    : opportunity.underlyingAssetIds.map(assetId => assets[assetId]?.icon).map(icon => icon ?? '')
