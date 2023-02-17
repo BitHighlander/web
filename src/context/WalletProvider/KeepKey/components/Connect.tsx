@@ -56,26 +56,26 @@ export const KeepKeyConnect = () => {
     setLoading(true)
     if (state.adapters) {
       let wallet
-      const adapters = state.adapters.get(KeyManager.KeepKey)
-      if (!adapters) return
-
       try {
         const sdk = await setupKeepKeySDK()
-        wallet = await adapters[0]?.pairDevice(sdk)
+        wallet = await state.adapters.get(KeyManager.KeepKey)?.[0]?.pairDevice(sdk)
         if (!wallet) {
           setErrorLoading('walletProvider.errors.walletNotFound')
           return
         }
       } catch (e) {
-        wallet = await adapters[1]?.pairDevice().catch(err => {
-          if (err.name === 'ConflictingApp') {
-            setErrorLoading('walletProvider.keepKey.connect.conflictingApp')
+        wallet = await state.adapters
+          .get(KeyManager.KeepKey)?.[1]
+          ?.pairDevice()
+          .catch(err => {
+            if (err.name === 'ConflictingApp') {
+              setErrorLoading('walletProvider.keepKey.connect.conflictingApp')
+              return
+            }
+            moduleLogger.error(err, 'KeepKey Connect: There was an error initializing the wallet')
+            setErrorLoading('walletProvider.errors.walletNotFound')
             return
-          }
-          moduleLogger.error(err, 'KeepKey Connect: There was an error initializing the wallet')
-          setErrorLoading('walletProvider.errors.walletNotFound')
-          return
-        })
+          })
         if (!wallet) {
           setErrorLoading('walletProvider.errors.walletNotFound')
           return

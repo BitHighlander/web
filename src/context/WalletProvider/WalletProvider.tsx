@@ -377,19 +377,15 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }): JSX
           // Fixes issue with wallet `type` being null when the wallet is loaded from state
           dispatch({ type: WalletActions.SET_CONNECTOR_TYPE, payload: localWalletType })
 
-          const nativeAdapters = state.adapters.get(KeyManager.Native)
-
           switch (localWalletType) {
             case KeyManager.Mobile:
               try {
                 const w = await getWallet(localWalletDeviceId)
                 fnLogger.trace({ id: w?.id, label: w?.label }, 'Found mobile wallet')
                 if (w && w.mnemonic && w.label) {
-                  if (!nativeAdapters) {
-                    disconnect()
-                    break
-                  }
-                  const localMobileWallet = await nativeAdapters[0]?.pairDevice(localWalletDeviceId)
+                  const localMobileWallet = await state.adapters
+                    .get(KeyManager.Mobile)?.[0]
+                    ?.pairDevice(localWalletDeviceId)
 
                   if (localMobileWallet) {
                     localMobileWallet.loadDevice({ label: w.label, mnemonic: w.mnemonic })
@@ -420,11 +416,9 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }): JSX
               }
               break
             case KeyManager.Native:
-              if (!nativeAdapters) {
-                disconnect()
-                break
-              }
-              const localNativeWallet = await nativeAdapters[0]?.pairDevice(localWalletDeviceId)
+              const localNativeWallet = await state.adapters
+                .get(KeyManager.Native)?.[0]
+                ?.pairDevice(localWalletDeviceId)
               if (localNativeWallet) {
                 /**
                  * This will eventually fire an event, which the native wallet
@@ -441,12 +435,10 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }): JSX
                   state.keyring.get(localWalletDeviceId)
                 if (!localKeepKeyWallet) {
                   const sdk = await setupKeepKeySDK()
-                  const keepKeyAdapters = state.adapters.get(KeyManager.KeepKey)
-                  if (!keepKeyAdapters) {
-                    disconnect()
-                    break
-                  }
-                  localKeepKeyWallet = await keepKeyAdapters[0]?.pairDevice(sdk)
+
+                  localKeepKeyWallet = await state.adapters
+                    .get(KeyManager.KeepKey)?.[0]
+                    ?.pairDevice(sdk)
                 }
 
                 /**
@@ -489,12 +481,9 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }): JSX
               dispatch({ type: WalletActions.SET_LOCAL_WALLET_LOADING, payload: false })
               break
             case KeyManager.Portis:
-              const portisAdapters = state.adapters.get(KeyManager.Portis)
-              if (!portisAdapters) {
-                disconnect()
-                break
-              }
-              const localPortisWallet = await portisAdapters[0]?.pairDevice()
+              const localPortisWallet = await state.adapters
+                .get(KeyManager.Portis)?.[0]
+                ?.pairDevice()
               if (localPortisWallet) {
                 const { name, icon } = SUPPORTED_WALLETS[KeyManager.Portis]
                 try {
@@ -526,12 +515,9 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }): JSX
               )
                 disconnect()
 
-              const metamaskAdapters = state.adapters.get(KeyManager.MetaMask)
-              if (!metamaskAdapters) {
-                disconnect()
-                break
-              }
-              const localMetaMaskWallet = await metamaskAdapters[0]?.pairDevice()
+              const localMetaMaskWallet = await state.adapters
+                .get(KeyManager.MetaMask)?.[0]
+                ?.pairDevice()
               if (localMetaMaskWallet) {
                 const { name, icon } = SUPPORTED_WALLETS[KeyManager.MetaMask]
                 try {
@@ -559,12 +545,9 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }): JSX
             case KeyManager.TallyHo:
               //Handle refresh bug - when a user changes TallyHo from default, is connected to TallyHo and refreshs the page
               if (localWalletType === 'tallyho' && window?.ethereum?.isMetaMask) disconnect()
-              const tallyHoAdapters = state.adapters.get(KeyManager.TallyHo)
-              if (!tallyHoAdapters) {
-                disconnect()
-                break
-              }
-              const localTallyHoWallet = await tallyHoAdapters[0]?.pairDevice()
+              const localTallyHoWallet = await state.adapters
+                .get(KeyManager.TallyHo)?.[0]
+                ?.pairDevice()
               if (localTallyHoWallet) {
                 const { name, icon } = SUPPORTED_WALLETS[KeyManager.TallyHo]
                 try {
@@ -589,12 +572,7 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }): JSX
               dispatch({ type: WalletActions.SET_LOCAL_WALLET_LOADING, payload: false })
               break
             case KeyManager.XDefi:
-              const xDefiAdapters = state.adapters.get(KeyManager.XDefi)
-              if (!xDefiAdapters) {
-                disconnect()
-                break
-              }
-              const localXDEFIWallet = await xDefiAdapters[0]?.pairDevice()
+              const localXDEFIWallet = await state.adapters.get(KeyManager.XDefi)?.[0]?.pairDevice()
               if (localXDEFIWallet) {
                 const { name, icon } = SUPPORTED_WALLETS[KeyManager.XDefi]
                 try {
@@ -619,12 +597,7 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }): JSX
               dispatch({ type: WalletActions.SET_LOCAL_WALLET_LOADING, payload: false })
               break
             case KeyManager.Keplr:
-              const keplrAdapters = state.adapters.get(KeyManager.Keplr)
-              if (!keplrAdapters) {
-                disconnect()
-                break
-              }
-              const localKeplrWallet = await keplrAdapters[0]?.pairDevice()
+              const localKeplrWallet = await state.adapters.get(KeyManager.Keplr)?.[0]?.pairDevice()
               if (localKeplrWallet) {
                 const { name, icon } = SUPPORTED_WALLETS[KeyManager.Keplr]
                 try {
@@ -649,12 +622,9 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }): JSX
               dispatch({ type: WalletActions.SET_LOCAL_WALLET_LOADING, payload: false })
               break
             case KeyManager.WalletConnect:
-              const walletConnectAdapters = state.adapters.get(KeyManager.WalletConnect)
-              if (!walletConnectAdapters) {
-                disconnect()
-                break
-              }
-              const localWalletConnectWallet = await walletConnectAdapters[0]?.pairDevice()
+              const localWalletConnectWallet = await state.adapters
+                .get(KeyManager.WalletConnect)?.[0]
+                ?.pairDevice()
               if (localWalletConnectWallet) {
                 const { name, icon } = SUPPORTED_WALLETS[KeyManager.WalletConnect]
                 try {
@@ -818,8 +788,8 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }): JSX
                 break
             }
             const walletAdapters = new Array<GenericAdapter>()
-            for (let i = 0; i < SUPPORTED_WALLETS[wallet].adapter.length; i++) {
-              const adapter = SUPPORTED_WALLETS[wallet].adapter[i].useKeyring(
+            for (let i = 0; i < SUPPORTED_WALLETS[wallet].adapters.length; i++) {
+              const adapter = SUPPORTED_WALLETS[wallet].adapters[i].useKeyring(
                 state.keyring,
                 options,
               )
@@ -854,13 +824,13 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }): JSX
   }, [])
 
   const connectDemo = useCallback(async () => {
-    const { name, icon, adapter } = SUPPORTED_WALLETS[KeyManager.Demo]
+    const { name, icon, adapters } = SUPPORTED_WALLETS[KeyManager.Demo]
     // For the demo wallet, we use the name, DemoWallet, as the deviceId
     const deviceId = name
     setLocalWalletTypeAndDeviceId(KeyManager.Demo, deviceId)
     setLocalNativeWalletName(name)
     dispatch({ type: WalletActions.SET_LOCAL_WALLET_LOADING, payload: true })
-    const adapterInstance = adapter[0].useKeyring(state.keyring)
+    const adapterInstance = adapters[0].useKeyring(state.keyring)
     const wallet = (await adapterInstance.pairDevice(deviceId)) as NativeHDWallet
     const { create } = native.crypto.Isolation.Engines.Dummy.BIP39.Mnemonic
     await wallet.loadDevice({
