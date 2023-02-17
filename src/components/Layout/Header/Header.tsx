@@ -2,14 +2,13 @@ import { HamburgerIcon, InfoIcon } from '@chakra-ui/icons'
 import {
   Box,
   Button,
+  Center,
   Drawer,
   DrawerContent,
   DrawerOverlay,
   Flex,
   HStack,
   IconButton,
-  Progress,
-  SlideFade,
   useColorModeValue,
   useDisclosure,
 } from '@chakra-ui/react'
@@ -19,14 +18,18 @@ import { useCallback, useEffect } from 'react'
 import { useTranslate } from 'react-polyglot'
 import { Link, useHistory } from 'react-router-dom'
 import { AssetSearch } from 'components/AssetSearch/AssetSearch'
+import { CircularProgress } from 'components/CircularProgress/CircularProgress'
 import { FoxIcon } from 'components/Icons/FoxIcon'
+import { SlideTransitionY } from 'components/SlideTransitionY'
 import { Text } from 'components/Text'
 import { WalletActions } from 'context/WalletProvider/actions'
 import { useFeatureFlag } from 'hooks/useFeatureFlag/useFeatureFlag'
 import { useIsAnyApiFetching } from 'hooks/useIsAnyApiFetching/useIsAnyApiFetching'
 import { useWallet } from 'hooks/useWallet/useWallet'
 
+import { useScrollDirection } from './hooks/useScrollDirection'
 import { ChainMenu } from './NavBar/ChainMenu'
+import { MobileNavBar } from './NavBar/MobileNavBar'
 import { Notifications } from './NavBar/Notifications'
 import { UserMenu } from './NavBar/UserMenu'
 import { SideNavContent } from './SideNavContent'
@@ -34,6 +37,7 @@ import { SideNavContent } from './SideNavContent'
 export const Header = () => {
   const { onToggle, isOpen, onClose } = useDisclosure()
   const isLoading = useIsAnyApiFetching()
+  const scrollDirection = useScrollDirection()
 
   const history = useHistory()
   const translate = useTranslate()
@@ -98,24 +102,15 @@ export const Header = () => {
         width='full'
         position='sticky'
         zIndex='banner'
-        top={0}
+        transitionDuration='500ms'
+        transitionProperty='all'
+        transitionTimingFunction='cubic-bezier(0.4, 0, 0.2, 1)'
+        top={{
+          base: scrollDirection === 'down' ? 'calc(-1 * (72px + env(safe-area-inset-top)))' : 0,
+          md: 0,
+        }}
         paddingTop={{ base: isDemoWallet ? 0 : 'env(safe-area-inset-top)', md: 0 }}
       >
-        <AnimatePresence exitBeforeEnter initial={true}>
-          {isLoading && (
-            <SlideFade in={true} reverse>
-              <Progress
-                isIndeterminate
-                position='absolute'
-                top={0}
-                left={0}
-                width='100%'
-                size='xs'
-                bg='transparent'
-              />
-            </SlideFade>
-          )}
-        </AnimatePresence>
         <HStack height='4.5rem' width='full' px={4} borderBottomWidth={1} borderColor={borderColor}>
           <HStack
             width='full'
@@ -135,7 +130,19 @@ export const Header = () => {
             </Box>
             <Flex justifyContent={{ base: 'center', md: 'flex-start' }}>
               <Link to='/'>
-                <FoxIcon boxSize='7' />
+                <AnimatePresence exitBeforeEnter initial={true}>
+                  {isLoading ? (
+                    <SlideTransitionY key='loader'>
+                      <Center boxSize='7'>
+                        <CircularProgress size={7} />
+                      </Center>
+                    </SlideTransitionY>
+                  ) : (
+                    <SlideTransitionY key='logo'>
+                      <FoxIcon boxSize='7' />
+                    </SlideTransitionY>
+                  )}
+                </AnimatePresence>
               </Link>
             </Flex>
             <HStack
@@ -176,6 +183,7 @@ export const Header = () => {
           <SideNavContent onClose={onClose} />
         </DrawerContent>
       </Drawer>
+      <MobileNavBar />
     </>
   )
 }

@@ -1,8 +1,24 @@
-import type { AccountId } from '@shapeshiftoss/caip'
-import { toAssetId } from '@shapeshiftoss/caip'
+import type { AccountId, AssetId } from '@shapeshiftoss/caip'
+import { toAccountId, toAssetId } from '@shapeshiftoss/caip'
+import type { BN } from '@shapeshiftoss/investor-foxy'
+import { bnOrZero } from '@shapeshiftoss/investor-foxy'
+import { bn } from 'lib/bignumber/bignumber'
 
-import { STAKING_ID_DELIMITER } from './constants'
-import type { OpportunityId, StakingId, UserStakingId } from './types'
+import { foxEthAssetIds, STAKING_ID_DELIMITER } from './constants'
+import type {
+  CosmosSdkStakingSpecificUserStakingOpportunity,
+  UserUndelegation,
+} from './resolvers/cosmosSdk/types'
+import type { FoxySpecificUserStakingOpportunity } from './resolvers/foxy/types'
+import type {
+  OpportunityId,
+  StakingEarnOpportunityType,
+  StakingId,
+  UserStakingId,
+  UserStakingOpportunity,
+  UserStakingOpportunityWithMetadata,
+  ValidatorId,
+} from './types'
 
 export type UserStakingIdParts = [accountId: AccountId, stakingId: StakingId]
 
@@ -30,5 +46,55 @@ export const filterUserStakingIdByStakingIdCompareFn = (
   return deserializedStakingId === stakingId
 }
 
+// An OpportunityId as an AssetId, i.e any chain where the opportunity is an Asset
+// That may be a L1 AssetId (THOR savers), or a smart contract account, which for all intent and purposes is an ERC20 i.e an asset
 export const toOpportunityId = (...[args]: Parameters<typeof toAssetId>) =>
   toAssetId(args) as OpportunityId
+
+// An OpportunityId as a ValidatorId
+// Currently used with Cosmos SDK opportunities, where the opportunity is a validator, e.g an Address
+// Since AccountId is generally used to represent portfolio accounts and not other, arbitrary on-chain accounts, we give this some flavour
+export const toValidatorId = (...[args]: Parameters<typeof toAccountId>) =>
+  toAccountId(args) as ValidatorId
+
+export const supportsUndelegations = (
+  userStakingOpportunity: Partial<UserStakingOpportunity>,
+): userStakingOpportunity is
+  | CosmosSdkStakingSpecificUserStakingOpportunity
+  | FoxySpecificUserStakingOpportunity => 'undelegations' in userStakingOpportunity
+
+export const makeTotalUndelegationsCryptoBaseUnit = (undelegations: UserUndelegation[]) =>
+  undelegations.reduce((a, { undelegationAmountCryptoBaseUnit: b }) => a.plus(b), bn(0))
+
+export const makeTotalCosmosSdkBondingsCryptoBaseUnit = (
+  userStakingOpportunity: Partial<UserStakingOpportunity>,
+): BN =>
+  bnOrZero(userStakingOpportunity?.stakedAmountCryptoBaseUnit)
+    .plus(userStakingOpportunity?.rewardsAmountsCryptoBaseUnit?.[0] ?? 0)
+    .plus(
+      makeTotalUndelegationsCryptoBaseUnit([
+        ...(supportsUndelegations(userStakingOpportunity)
+          ? userStakingOpportunity.undelegations
+          : []),
+      ]),
+    )
+
+export const isActiveStakingOpportunity = (
+  userStakingOpportunity: UserStakingOpportunity | UserStakingOpportunityWithMetadata,
+) => {
+  const hasActiveStaking = bn(userStakingOpportunity.stakedAmountCryptoBaseUnit).gt(0)
+  const hasRewards = userStakingOpportunity.rewardsAmountsCryptoBaseUnit.some(rewardsAmount =>
+    bn(rewardsAmount).gt(0),
+  )
+  // Defaults to 0 for non-Cosmos-Sdk opportunities
+  const hasActiveUndelegations = makeTotalUndelegationsCryptoBaseUnit([
+    ...(supportsUndelegations(userStakingOpportunity) ? userStakingOpportunity.undelegations : []),
+  ]).gt(0)
+
+  return hasActiveStaking || hasRewards || hasActiveUndelegations
+}
+
+export const isActiveStakingEarnOpportunity = (
+  earnUserStakingOpportunity: StakingEarnOpportunityType,
+): boolean => isActiveStakingOpportunity(earnUserStakingOpportunity as UserStakingOpportunity)
+export const isFoxEthStakingAssetId = (assetId: AssetId) => foxEthAssetIds.includes(assetId)

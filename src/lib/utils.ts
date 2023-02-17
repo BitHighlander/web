@@ -126,3 +126,10 @@ export const isFulfilled = <T>(
 
 export const isRejected = <T>(promise: PromiseSettledResult<T>): promise is PromiseRejectedResult =>
   promise.status === 'rejected'
+
+export const setTimeoutAsync = (waitMs: number) =>
+  new Promise(resolve => setTimeout(resolve, waitMs))
+
+export function assertUnreachable(x: never): never {
+  throw Error(`unhandled case: ${x}`)
+}

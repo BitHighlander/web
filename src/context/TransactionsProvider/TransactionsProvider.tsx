@@ -1,18 +1,20 @@
 import type { AccountId } from '@shapeshiftoss/caip'
-import {
-  cosmosChainId,
-  ethChainId,
-  foxAssetId,
-  fromAccountId,
-  osmosisChainId,
-} from '@shapeshiftoss/caip'
+import { ethChainId, foxAssetId, fromAccountId } from '@shapeshiftoss/caip'
 import type { Transaction } from '@shapeshiftoss/chain-adapters'
+import { TxStatus } from '@shapeshiftoss/unchained-client'
+import { DefiProvider, DefiType } from 'features/defi/contexts/DefiManagerProvider/DefiCommon'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { getChainAdapterManager } from 'context/PluginProvider/chainAdapterSingleton'
 import { useWallet } from 'hooks/useWallet/useWallet'
 import { logger } from 'lib/logger'
 import { foxEthLpAssetId } from 'state/slices/opportunitiesSlice/constants'
+import { opportunitiesApi } from 'state/slices/opportunitiesSlice/opportunitiesSlice'
+import {
+  isSupportedThorchainSaversAssetId,
+  isSupportedThorchainSaversChainId,
+  waitForSaversUpdate,
+} from 'state/slices/opportunitiesSlice/resolvers/thorchainsavers/utils'
 import {
   fetchAllOpportunitiesIds,
   fetchAllOpportunitiesMetadata,
@@ -25,7 +27,6 @@ import {
   selectStakingOpportunitiesById,
 } from 'state/slices/selectors'
 import { txHistory } from 'state/slices/txHistorySlice/txHistorySlice'
-import { validatorDataApi } from 'state/slices/validatorDataSlice/validatorDataSlice'
 import { useAppDispatch } from 'state/store'
 
 import { usePlugins } from '../PluginProvider/PluginProvider'
@@ -49,7 +50,45 @@ export const TransactionsProvider: React.FC<TransactionsProviderProps> = ({ chil
   const stakingOpportunitiesById = useSelector(selectStakingOpportunitiesById)
 
   const maybeRefetchOpportunities = useCallback(
-    ({ chainId, transfers }: Transaction, accountId: AccountId) => {
+    ({ chainId, data, transfers, status }: Transaction, accountId: AccountId) => {
+      if (status !== TxStatus.Confirmed) return
+
+      const { getOpportunitiesUserData } = opportunitiesApi.endpoints
+
+      if (data?.parser === 'staking') {
+        dispatch(
+          getOpportunitiesUserData.initiate(
+            {
+              accountId,
+              defiType: DefiType.Staking,
+              defiProvider: DefiProvider.Cosmos,
+              opportunityType: DefiType.Staking,
+            },
+            { forceRefetch: true },
+          ),
+        )
+      }
+
+      if (
+        isSupportedThorchainSaversChainId(chainId) &&
+        transfers.some(({ assetId }) => isSupportedThorchainSaversAssetId(assetId))
+      ) {
+        // Artificial longer completion time, since THORChain Txs take around 15s after confirmation to be picked in the API
+        // This way, we ensure "View Position" actually routes to the updated position
+        waitForSaversUpdate().then(() => {
+          dispatch(
+            getOpportunitiesUserData.initiate(
+              {
+                accountId,
+                defiType: DefiType.Staking,
+                defiProvider: DefiProvider.ThorchainSavers,
+                opportunityType: DefiType.Staking,
+              },
+              { forceRefetch: true },
+            ),
+          )
+        })
+      }
       if (
         !(
           chainId === ethChainId &&
@@ -131,12 +170,7 @@ export const TransactionsProvider: React.FC<TransactionsProviderProps> = ({ chil
             { wallet, accountType, accountNumber },
             msg => {
               const { getAccount } = portfolioApi.endpoints
-              const { getValidatorData } = validatorDataApi.endpoints
               const { onMessage } = txHistory.actions
-
-              // refetch validator data on new txs in case TVL or APR has changed
-              if ([cosmosChainId, osmosisChainId].includes(msg.chainId))
-                dispatch(getValidatorData.initiate(accountId))
 
               // refetch account on new tx
               dispatch(
