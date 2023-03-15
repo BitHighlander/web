@@ -3603,24 +3603,19 @@
     google-protobuf "^3.7.0-rc.2"
     pbjs "^0.0.5"
 
-"@keepkey/hdwallet-keepkey-rest@1.40.12":
-  version "1.40.12"
-  resolved "https://registry.yarnpkg.com/@keepkey/hdwallet-keepkey-rest/-/hdwallet-keepkey-rest-1.40.12.tgz#ba0329d5a62484d14ab1edf06437d34a84ad39a0"
-  integrity sha512-vwJcuJWu1T0Fir4xIN2vSpPKgodEQRXepPLUocu+1gKQnfgSa1LumNHWyUOAysHlo9mMHyc4NwdgElBo7fbiyw==
+"@keepkey/hdwallet-keepkey-rest@^1.40.19":
+  version "1.40.19"
+  resolved "https://registry.yarnpkg.com/@keepkey/hdwallet-keepkey-rest/-/hdwallet-keepkey-rest-1.40.19.tgz#e5e7752db8f30639d46857a0d57f65c2810df5b8"
+  integrity sha512-OI/GfpZ7lZOcYCjcU68Xps+OK4Pb60TGYKNCLzTrBZUlYtlJXBCiaq9hDtN8RvVMoKtlBoMa1lS4rdutEm6ArQ==
   dependencies:
-    "@keepkey/keepkey-sdk" "0.2.25"
+    "@keepkey/keepkey-sdk" "0.2.33"
     lodash "^4.17.21"
     semver "^6.3.0"
 
-"@keepkey/keepkey-sdk@0.2.25":
-  version "0.2.25"
-  resolved "https://registry.yarnpkg.com/@keepkey/keepkey-sdk/-/keepkey-sdk-0.2.25.tgz#2ad8d65456812900f30b16bae8b58dd54f728c0c"
-  integrity sha512-VlKjvK6oPlixY69EBHR6/cLpusfr34O3IL3i4IWbOAyGF4v/KWh+iULiQDU0H/0OwMqbo0BEoWZe+8H5n+jbHA==
-
-"@keepkey/keepkey-sdk@0.2.26":
-  version "0.2.26"
-  resolved "https://registry.yarnpkg.com/@keepkey/keepkey-sdk/-/keepkey-sdk-0.2.26.tgz#554cc4ea4e6f3a4dfb511ae992a5d93b4f14db7b"
-  integrity sha512-SJDaYA/BbIYlvM+6uCEDaFkqNIcNbMnxzsytsqSTLM/US+6QLP09hREyS913Ox1LLl+05j7H9RY7FnDfWI05wg==
+"@keepkey/keepkey-sdk@0.2.33", "@keepkey/keepkey-sdk@^0.2.32":
+  version "0.2.33"
+  resolved "https://registry.yarnpkg.com/@keepkey/keepkey-sdk/-/keepkey-sdk-0.2.33.tgz#d0ff5558e98e74808028f37f8b5726a448cb3510"
+  integrity sha512-18z+bdUfJBndH7vuhi4wlrO9D3umBdt60+XICGujnnpcPuqm4uFDocXjuezsUHv3VQyCBliXSaLRw/wrKY5/FQ==
 
 "@keplr-wallet/types@^0.10.5":
   version "0.10.5"
