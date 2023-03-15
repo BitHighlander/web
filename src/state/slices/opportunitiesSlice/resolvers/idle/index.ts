@@ -2,6 +2,7 @@ import type { AssetId, ToAssetIdArgs } from '@shapeshiftoss/caip'
 import { ethChainId, fromAccountId, fromAssetId, toAssetId } from '@shapeshiftoss/caip'
 import { bnOrZero } from '@shapeshiftoss/investor-foxy'
 import { DefiProvider, DefiType } from 'features/defi/contexts/DefiManagerProvider/DefiCommon'
+import { bn } from 'lib/bignumber/bignumber'
 import { logger } from 'lib/logger'
 import {
   selectAssetById,
@@ -103,16 +104,19 @@ export const idleStakingOpportunitiesMetadataResolver = async ({
     stakingOpportunitiesById[opportunityId] = baseOpportunity
       ? {
           ...baseOpportunity,
+          cdoAddress: opportunity.metadata.cdoAddress,
           apy: opportunity.apy.toFixed(),
           tvl: opportunity.tvl.balanceUsdc.toFixed(),
           name: `${underlyingAsset.symbol} Vault`,
           version: opportunity.version,
           provider: DefiProvider.Idle,
           type: DefiType.Staking,
+          tags: [opportunity.strategy],
         }
       : {
           apy: opportunity.apy.toFixed(),
           assetId,
+          cdoAddress: opportunity.metadata.cdoAddress,
           id: opportunityId,
           provider: DefiProvider.Idle,
           tvl: opportunity.tvl.balance.toFixed(),
@@ -127,10 +131,17 @@ export const idleStakingOpportunitiesMetadataResolver = async ({
               )
             })) as [AssetId] | [AssetId, AssetId] | [AssetId, AssetId, AssetId] | undefined,
           },
-          // Idle opportunities wrap a single yield-bearing asset, so the ratio will always be 1
-          underlyingAssetRatiosBaseUnit: ['1000000000000000000'],
+          // Idle opportunities wrap a single yield-bearing asset, so in terms of ratio will always be "100%" of the pool
+          // However, since the ratio is used to calculate the underlying amounts, it needs to be greater than 1
+          // As 1 Idle token wraps ~1.0x* underlying
+          underlyingAssetRatiosBaseUnit: [
+            opportunity.positionAsset.underlyingPerPosition
+              .times(bn(10).pow(underlyingAsset.precision))
+              .toFixed(),
+          ],
           name: `${underlyingAsset.symbol} Vault`,
           version: opportunity.version,
+          tags: [opportunity.strategy],
         }
   }
 

@@ -1,36 +1,32 @@
 import { useEffect, useMemo } from 'react'
-import { useFormContext, useWatch } from 'react-hook-form'
 import { useSwapper } from 'components/Trade/hooks/useSwapper/useSwapper'
-import type { TS } from 'components/Trade/types'
-import { selectAssetById } from 'state/slices/assetsSlice/selectors'
 import { selectHighestFiatBalanceAccountByAssetId } from 'state/slices/portfolioSlice/selectors'
 import { selectFirstAccountIdByChainId } from 'state/slices/selectors'
 import { useAppSelector } from 'state/store'
+import { useSwapperStore } from 'state/zustand/swapperStore/useSwapperStore'
 
 /*
 The Accounts Service is responsible for reacting to changes to trade assets and selected accounts.
-It mutates TradeState's sellAssetAccountId and buyAssetAccountId properties.
+It sets sellAssetAccountId and buyAssetAccountId properties.
 */
 export const useAccountsService = () => {
-  // Form hooks
-  const { control, setValue } = useFormContext<TS>()
-  const selectedSellAssetAccountId = useWatch({ control, name: 'selectedSellAssetAccountId' })
-  const selectedBuyAssetAccountId = useWatch({ control, name: 'selectedBuyAssetAccountId' })
-  const sellTradeAsset = useWatch({ control, name: 'sellTradeAsset' })
-  const buyTradeAsset = useWatch({ control, name: 'buyTradeAsset' })
-  const formSellAssetAccountId = useWatch({ control, name: 'sellAssetAccountId' })
-  const formBuyAssetAccountId = useWatch({ control, name: 'buyAssetAccountId' })
-
   // Custom hooks
-  const { swapperSupportsCrossAccountTrade, bestTradeSwapper } = useSwapper()
-
-  // Constants
-  const sellAssetId = sellTradeAsset?.asset?.assetId
-  const buyAssetId = buyTradeAsset?.asset?.assetId
+  const { swapperSupportsCrossAccountTrade } = useSwapper()
 
   // Selectors
-  const sellAsset = useAppSelector(state => selectAssetById(state, sellAssetId ?? ''))
-  const buyAsset = useAppSelector(state => selectAssetById(state, buyAssetId ?? ''))
+  const stateBuyAssetAccountId = useSwapperStore(state => state.buyAssetAccountId)
+  const stateSellAssetAccountId = useSwapperStore(state => state.sellAssetAccountId)
+  const updateBuyAssetAccountId = useSwapperStore(state => state.updateBuyAssetAccountId)
+  const updateSellAssetAccountId = useSwapperStore(state => state.updateSellAssetAccountId)
+  const selectedBuyAssetAccountId = useSwapperStore(state => state.selectedBuyAssetAccountId)
+  const selectedSellAssetAccountId = useSwapperStore(state => state.selectedSellAssetAccountId)
+  const bestTradeSwapper = useSwapperStore(state => state.activeSwapperWithMetadata?.swapper)
+  const buyAsset = useSwapperStore(state => state.buyAsset)
+  const sellAsset = useSwapperStore(state => state.sellAsset)
+
+  const sellAssetId = sellAsset?.assetId
+  const buyAssetId = buyAsset?.assetId
+
   const highestFiatBalanceSellAccountId = useAppSelector(state =>
     selectHighestFiatBalanceAccountByAssetId(state, {
       assetId: sellAssetId ?? '',
@@ -60,32 +56,29 @@ export const useAccountsService = () => {
 
   // Set sellAssetAccountId
   useEffect(
-    () => setValue('sellAssetAccountId', sellAssetAccountId),
-    // formSellAssetAccountId is important here as it ensures this useEffect re-runs when the form value is cleared
-    [sellAssetAccountId, setValue, formSellAssetAccountId],
+    () => updateSellAssetAccountId(sellAssetAccountId),
+    // stateSellAssetAccountId is important here as it ensures this useEffect re-runs when the form value is cleared
+    [sellAssetAccountId, stateSellAssetAccountId, updateSellAssetAccountId],
   )
 
   // Set buyAssetAccountId
   useEffect(() => {
-    setValue(
-      'buyAssetAccountId',
-      /*
-        This is extremely dangerous. We only want to substitute the buyAssetAccountId with the sellAssetAccountId
-        if we have a swapper, and that swapper does not do either of:
-          - Trades between assets on the same chain but different accounts
-          - Trades between assets on different chains (and possibly different accounts)
-       */
-      swapperSupportsCrossAccountTrade || !bestTradeSwapper
-        ? buyAssetAccountId
-        : sellAssetAccountId,
-    )
-    // formBuyAssetAccountId is important here as it ensures this useEffect re-runs when the form value is cleared
+    /*
+      This is extremely dangerous. We only want to substitute the buyAssetAccountId with the sellAssetAccountId
+      if we have a swapper, and that swapper does not do either of:
+        - Trades between assets on the same chain but different accounts
+        - Trades between assets on different chains (and possibly different accounts)
+    */
+    const buyAssetAccountIdToSet =
+      swapperSupportsCrossAccountTrade || !bestTradeSwapper ? buyAssetAccountId : sellAssetAccountId
+    updateBuyAssetAccountId(buyAssetAccountIdToSet)
+    // stateBuyAssetAccountId is important here as it ensures this useEffect re-runs when the form value is cleared
   }, [
     buyAssetAccountId,
     sellAssetAccountId,
-    setValue,
     swapperSupportsCrossAccountTrade,
-    formBuyAssetAccountId,
+    stateBuyAssetAccountId,
     bestTradeSwapper,
+    updateBuyAssetAccountId,
   ])
 }

@@ -3,7 +3,7 @@ import type { Asset } from '@shapeshiftoss/asset-service'
 import type { AccountId } from '@shapeshiftoss/caip'
 import { fromAccountId, toAssetId } from '@shapeshiftoss/caip'
 import type { UtxoBaseAdapter, UtxoChainId } from '@shapeshiftoss/chain-adapters'
-import { getInboundAddressDataForChain, SwapperName } from '@shapeshiftoss/swapper'
+import { getInboundAddressDataForChain } from '@shapeshiftoss/swapper'
 import { getConfig } from 'config'
 import type { DepositValues } from 'features/defi/components/Deposit/Deposit'
 import { Deposit as ReusableDeposit } from 'features/defi/components/Deposit/Deposit'
@@ -28,7 +28,8 @@ import { getSupportedEvmChainIds } from 'hooks/useEvm/useEvm'
 import { bn, bnOrZero } from 'lib/bignumber/bignumber'
 import { logger } from 'lib/logger'
 import { toBaseUnit } from 'lib/math'
-import { getIsTradingActiveApi } from 'state/apis/swapper/getIsTradingActiveApi'
+import { trackOpportunityEvent } from 'lib/mixpanel/helpers'
+import { MixPanelEvents } from 'lib/mixpanel/types'
 import {
   BASE_BPS_POINTS,
   fromThorBaseUnit,
@@ -39,12 +40,13 @@ import {
 import { serializeUserStakingId, toOpportunityId } from 'state/slices/opportunitiesSlice/utils'
 import {
   selectAssetById,
+  selectAssets,
   selectEarnUserStakingOpportunityByUserStakingId,
   selectHighestBalanceAccountIdByStakingId,
   selectMarketDataById,
   selectPortfolioCryptoBalanceByFilter,
 } from 'state/slices/selectors'
-import { useAppDispatch, useAppSelector } from 'state/store'
+import { useAppSelector } from 'state/store'
 
 import { ThorchainSaversDepositActionType } from '../DepositCommon'
 import { DepositContext } from '../DepositContext'
@@ -63,7 +65,6 @@ export const Deposit: React.FC<DepositProps> = ({
 }) => {
   const [outboundFeeCryptoBaseUnit, setOutboundFeeCryptoBaseUnit] = useState('')
   const { state, dispatch: contextDispatch } = useContext(DepositContext)
-  const appDispatch = useAppDispatch()
   const history = useHistory()
   const translate = useTranslate()
   const [slippageCryptoAmountPrecision, setSlippageCryptoAmountPrecision] = useState<string | null>(
@@ -77,6 +78,7 @@ export const Deposit: React.FC<DepositProps> = ({
   const [quoteLoading, setQuoteLoading] = useState(false)
   const { query, history: browserHistory } = useBrowserRouter<DefiQueryParams, DefiParams>()
   const { chainId, assetNamespace, assetReference } = query
+  const assets = useAppSelector(selectAssets)
 
   const assetId = toAssetId({
     chainId,
@@ -215,18 +217,6 @@ export const Deposit: React.FC<DepositProps> = ({
       contextDispatch({ type: ThorchainSaversDepositActionType.SET_DEPOSIT, payload: formValues })
       contextDispatch({ type: ThorchainSaversDepositActionType.SET_LOADING, payload: true })
       try {
-        const { getIsTradingActive } = getIsTradingActiveApi.endpoints
-        const { data: isTradingActive } = await appDispatch(
-          getIsTradingActive.initiate({
-            assetId,
-            swapperName: SwapperName.Thorchain,
-          }),
-        )
-
-        if (!isTradingActive) {
-          throw new Error(`THORChain pool halted for assetId: ${assetId}`)
-        }
-
         const estimatedGasCrypto = await getDepositGasEstimate(formValues)
         if (!estimatedGasCrypto) return
         contextDispatch({
@@ -235,6 +225,15 @@ export const Deposit: React.FC<DepositProps> = ({
         })
         onNext(DefiStep.Confirm)
         contextDispatch({ type: ThorchainSaversDepositActionType.SET_LOADING, payload: false })
+        trackOpportunityEvent(
+          MixPanelEvents.DepositContinue,
+          {
+            opportunity: opportunityData,
+            fiatAmounts: [formValues.fiatAmount],
+            cryptoAmounts: [{ assetId, amountCryptoHuman: formValues.cryptoAmount }],
+          },
+          assets,
+        )
       } catch (error) {
         moduleLogger.error({ fn: 'handleContinue', error }, 'Error on continue')
         toast({
@@ -247,13 +246,13 @@ export const Deposit: React.FC<DepositProps> = ({
       }
     },
     [
+      assets,
       userAddress,
       opportunityData,
       contextDispatch,
-      appDispatch,
-      assetId,
       getDepositGasEstimate,
       onNext,
+      assetId,
       toast,
       translate,
     ],

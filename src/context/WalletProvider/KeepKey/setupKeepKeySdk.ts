@@ -1,25 +1,40 @@
-import { KeepKeySdk, PairingInfo } from '@keepkey/keepkey-sdk'
+import type { PairingInfo } from '@keepkey/keepkey-sdk'
+import { KeepKeySdk } from '@keepkey/keepkey-sdk'
+import { foxAssetId } from '@shapeshiftoss/caip'
+import { store } from 'state/store'
 
-interface Config {
+type Config = {
   apiKey: string
   pairingInfo: PairingInfo
 }
 
-export const setupKeepKeySDK = async () => {
-  const serviceKey = window.localStorage.getItem('@app/serviceKey') || 'notSet'
-  let config: Config = {
+type SetupKeepKeySDK = () => Promise<KeepKeySdk | undefined>
+
+export const setupKeepKeySDK: SetupKeepKeySDK = async () => {
+  const serviceKey = window.localStorage.getItem('@app/serviceKey') || ''
+  const imageUrl = store.getState().assets.byId[foxAssetId]?.icon || ''
+
+  const config: Config = {
     apiKey: serviceKey,
     pairingInfo: {
       name: 'ShapeShift',
-      imageUrl: 'https://assets.coincap.io/assets/icons/fox@2x.png',
+      imageUrl,
       url: 'https://app.shapeshift.com',
     },
   }
-  const sdk = await KeepKeySdk.create(config)
-  //If apiKey is revoked by wallet, or 'notSet' a user will be prompted to pair and new apiKey issued by wallet.
-  if (serviceKey !== config.apiKey) {
-    //store apiKey to avoid needing to pair again
-    window.localStorage.setItem('@app/serviceKey', config.apiKey)
+
+  try {
+    const sdk = await KeepKeySdk.create(config)
+    /**
+     * NOTE - the KeepKeySdk.create() call mutates the config it's passed in...
+     * so even though this may have been an empty string before, it might be populated now
+     */
+    config.apiKey && window.localStorage.setItem('@app/serviceKey', config.apiKey)
+    return sdk
+  } catch (e) {
+    /**
+     * this is expected to happen without the KK desktop client running
+     */
+    return undefined
   }
-  return sdk
 }

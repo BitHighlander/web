@@ -55,19 +55,19 @@ export const KeepKeyConnect = () => {
     setError(null)
     setLoading(true)
     if (state.adapters) {
-      let wallet
-      try {
-        const sdk = await setupKeepKeySDK()
-        wallet = await state.adapters.get(KeyManager.KeepKey)?.[0]?.pairDevice(sdk)
-        if (!wallet) {
-          setErrorLoading('walletProvider.errors.walletNotFound')
-          return
-        }
-      } catch (e) {
-        wallet = await state.adapters
-          .get(KeyManager.KeepKey)?.[1]
-          ?.pairDevice()
-          .catch(err => {
+      const adapters = state.adapters.get(KeyManager.KeepKey)
+      if (!adapters) return
+      const wallet = await (async () => {
+        try {
+          const sdk = await setupKeepKeySDK()
+          const wallet = await adapters[0]?.pairDevice(sdk)
+          if (!wallet) {
+            setErrorLoading('walletProvider.errors.walletNotFound')
+            return
+          }
+          return wallet
+        } catch (e) {
+          const wallet = await adapters[1]?.pairDevice().catch(err => {
             if (err.name === 'ConflictingApp') {
               setErrorLoading('walletProvider.keepKey.connect.conflictingApp')
               return
@@ -76,12 +76,14 @@ export const KeepKeyConnect = () => {
             setErrorLoading('walletProvider.errors.walletNotFound')
             return
           })
-        if (!wallet) {
-          setErrorLoading('walletProvider.errors.walletNotFound')
-          return
+          if (!wallet) {
+            setErrorLoading('walletProvider.errors.walletNotFound')
+            return
+          }
+          return wallet
         }
-      }
-
+      })()
+      if (!wallet) return
       const { name, icon } = KeepKeyConfig
       try {
         const deviceId = await wallet.getDeviceID()
@@ -99,7 +101,7 @@ export const KeepKeyConnect = () => {
 
         dispatch({
           type: WalletActions.SET_WALLET,
-          payload: { wallet, name: label, icon, deviceId, meta: { label } },
+          payload: { wallet, name, icon, deviceId, meta: { label } },
         })
         dispatch({ type: WalletActions.SET_IS_CONNECTED, payload: true })
         /**

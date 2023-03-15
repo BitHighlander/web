@@ -29,9 +29,9 @@ type FoxEthProviderProps = {
 
 type IFoxEthContext = {
   farmingAccountId: AccountId | undefined
-  setFarmingAccountId: (accountId: AccountId) => void
+  setFarmingAccountId: (accountId: AccountId | undefined) => void
   lpAccountId: AccountId | undefined
-  setLpAccountId: (accountId: AccountId) => void
+  setLpAccountId: (accountId: AccountId | undefined) => void
   onOngoingFarmingTxIdChange: (txid: string, contractAddress?: string) => void
   onOngoingLpTxIdChange: (txid: string, contractAddress?: string) => void
 }
@@ -138,7 +138,7 @@ export const FoxEthProvider = ({ children }: FoxEthProviderProps) => {
                 }),
                 opportunityType: DefiType.Staking,
                 defiType: DefiType.Staking,
-                defiProvider: DefiProvider.FoxFarming,
+                defiProvider: DefiProvider.EthFoxStaking,
               },
               // Any previous query without portfolio loaded will be rejected
               // The first successful one will be cached unless forceRefetch is overriden with queryOptions

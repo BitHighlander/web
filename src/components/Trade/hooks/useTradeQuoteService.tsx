@@ -3,10 +3,7 @@ import { fromAssetId } from '@shapeshiftoss/caip'
 import { type GetTradeQuoteInput } from '@shapeshiftoss/swapper'
 import { DEFAULT_SLIPPAGE } from 'constants/constants'
 import { useEffect, useState } from 'react'
-import { useFormContext, useWatch } from 'react-hook-form'
-import { useReceiveAddress } from 'components/Trade/hooks/useReceiveAddress'
 import { getTradeQuoteArgs } from 'components/Trade/hooks/useSwapper/getTradeQuoteArgs'
-import type { TS } from 'components/Trade/types'
 import { getChainAdapterManager } from 'context/PluginProvider/chainAdapterSingleton'
 import { useWallet } from 'hooks/useWallet/useWallet'
 import { useGetTradeQuoteQuery } from 'state/apis/swapper/getTradeQuoteApi'
@@ -16,22 +13,13 @@ import {
   selectPortfolioAccountMetadataByAccountId,
 } from 'state/slices/selectors'
 import { useAppSelector } from 'state/store'
+import { useSwapperStore } from 'state/zustand/swapperStore/useSwapperStore'
 
 /*
 The Trade Quote Service is responsible for reacting to changes to trade assets and updating the quote accordingly.
-The only mutation is on TradeState's quote property.
+The only mutation is on the quote property of SwapperState.
 */
 export const useTradeQuoteService = () => {
-  // Form hooks
-  const { control, setValue } = useFormContext<TS>()
-  const sellTradeAsset = useWatch({ control, name: 'sellTradeAsset' })
-  const buyTradeAsset = useWatch({ control, name: 'buyTradeAsset' })
-  const sellAssetAccountId = useWatch({ control, name: 'sellAssetAccountId' })
-  const amount = useWatch({ control, name: 'amount' })
-  const action = useWatch({ control, name: 'action' })
-  const isSendMax = useWatch({ control, name: 'isSendMax' })
-  const quote = useWatch({ control, name: 'quote' })
-
   // Types
   type TradeQuoteQueryInput = Parameters<typeof useGetTradeQuoteQuery>
   type TradeQuoteInputArg = TradeQuoteQueryInput[0]
@@ -39,14 +27,20 @@ export const useTradeQuoteService = () => {
   // State
   const wallet = useWallet().state.wallet
   const [tradeQuoteArgs, setTradeQuoteArgs] = useState<TradeQuoteInputArg>(skipToken)
-  const { receiveAddress } = useReceiveAddress()
-
-  // Constants
-  const sellAsset = sellTradeAsset?.asset
-  const buyAsset = buyTradeAsset?.asset
 
   // Selectors
   const selectedCurrencyToUsdRate = useAppSelector(selectFiatToUsdRate)
+  const quote = useSwapperStore(state => state.quote)
+  const updateQuote = useSwapperStore(state => state.updateQuote)
+  const action = useSwapperStore(state => state.action)
+  const isSendMax = useSwapperStore(state => state.isSendMax)
+  const amount = useSwapperStore(state => state.amount)
+  const receiveAddress = useSwapperStore(state => state.receiveAddress)
+  const updateSlippage = useSwapperStore(state => state.updateSlippage)
+  const sellAssetAccountId = useSwapperStore(state => state.sellAssetAccountId)
+  const sellAsset = useSwapperStore(state => state.sellAsset)
+  const buyAsset = useSwapperStore(state => state.buyAsset)
+  const sellAmountCryptoPrecision = useSwapperStore(state => state.sellAmountCryptoPrecision)
 
   const sellAssetAccountIds = useAppSelector(state =>
     selectPortfolioAccountIdsByAssetId(state, {
@@ -67,12 +61,11 @@ export const useTradeQuoteService = () => {
   // Effects
   // Set trade quote args and trigger trade quote query
   useEffect(() => {
-    const sellTradeAssetAmountCryptoPrecision = sellTradeAsset?.amountCryptoPrecision
     if (
       sellAsset &&
       buyAsset &&
       wallet &&
-      sellTradeAssetAmountCryptoPrecision &&
+      sellAmountCryptoPrecision &&
       receiveAddress &&
       sellAccountMetadata
     ) {
@@ -91,7 +84,7 @@ export const useTradeQuoteService = () => {
           buyAsset,
           wallet,
           receiveAddress,
-          sellAmountBeforeFeesCryptoPrecision: sellTradeAssetAmountCryptoPrecision,
+          sellAmountBeforeFeesCryptoPrecision: sellAmountCryptoPrecision,
           isSendMax,
         })
         tradeQuoteInputArgs && setTradeQuoteArgs(tradeQuoteInputArgs)
@@ -101,35 +94,29 @@ export const useTradeQuoteService = () => {
     action,
     amount,
     buyAsset,
-    buyTradeAsset,
     receiveAddress,
     sellAccountMetadata,
     selectedCurrencyToUsdRate,
     sellAsset,
-    sellTradeAsset,
-    setValue,
     wallet,
     isSendMax,
+    sellAmountCryptoPrecision,
   ])
 
   // Update trade quote
-  useEffect(() => setValue('quote', tradeQuote), [tradeQuote, setValue])
+  useEffect(() => updateQuote(tradeQuote), [tradeQuote, updateQuote])
 
   // Set slippage if the quote contains a recommended value, else use the default
   useEffect(
-    () =>
-      setValue(
-        'slippage',
-        tradeQuote?.recommendedSlippage ? tradeQuote.recommendedSlippage : DEFAULT_SLIPPAGE,
-      ),
-    [tradeQuote, setValue],
+    () => updateSlippage(tradeQuote?.recommendedSlippage || DEFAULT_SLIPPAGE),
+    [tradeQuote, updateSlippage],
   )
 
   // Set trade quote if not yet set (e.g. on page load)
   useEffect(() => {
     // Checking that no quote has been set and tradeQuote exists prevents an infinite render
-    !quote && tradeQuote && setValue('quote', tradeQuote)
-  }, [quote, setValue, tradeQuote])
+    !quote && tradeQuote && updateQuote(tradeQuote)
+  }, [quote, tradeQuote, updateQuote])
 
   return {
     isLoadingTradeQuote,

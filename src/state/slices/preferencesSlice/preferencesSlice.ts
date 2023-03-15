@@ -12,20 +12,29 @@ export type FeatureFlags = {
   OsmosisStaking: boolean
   OsmosisSwap: boolean
   OsmosisLP: boolean
+  OsmosisLPAdditionalPools: boolean
   Optimism: boolean
-  OptimismZrx: boolean
+  BnbSmartChain: boolean
   ThorSwap: boolean
-  Pendo: boolean
   IdleFinance: boolean
   Axelar: boolean
   Yat: boolean
   WalletConnectToDapps: boolean
+  WalletConnectToDappsV2: boolean
   Wherever: boolean
   SaversVaults: boolean
   Yearn: boolean
+  DefiDashboard: boolean
   ArkeoAirdrop: boolean
   TradeRates: boolean
   Cowswap: boolean
+  ZrxAvalancheSwap: boolean
+  ZrxBnbSmartChain: boolean
+  ZrxEthereumSwap: boolean
+  ZrxOptimismSwap: boolean
+  Mixpanel: boolean
+  LiveSupport: boolean
+  LifiSwap: boolean
 }
 
 export type Flag = keyof FeatureFlags
@@ -42,6 +51,7 @@ export type Preferences = {
   selectedCurrency: SupportedFiatCurrencies
   currencyFormat: CurrencyFormats
   showWelcomeModal: boolean
+  showConsentBanner: boolean
 }
 
 const initialState: Preferences = {
@@ -50,26 +60,36 @@ const initialState: Preferences = {
     OsmosisStaking: getConfig().REACT_APP_FEATURE_OSMOSIS_STAKING,
     OsmosisSwap: getConfig().REACT_APP_FEATURE_OSMOSIS_SWAP,
     OsmosisLP: getConfig().REACT_APP_FEATURE_OSMOSIS_LP,
+    OsmosisLPAdditionalPools: getConfig().REACT_APP_FEATURE_OSMOSIS_LP_ADDITIONAL_POOLS,
     Optimism: getConfig().REACT_APP_FEATURE_OPTIMISM,
-    OptimismZrx: getConfig().REACT_APP_FEATURE_OPTIMISM_ZRX,
+    BnbSmartChain: getConfig().REACT_APP_FEATURE_BNBSMARTCHAIN,
     ThorSwap: getConfig().REACT_APP_FEATURE_THOR_SWAP,
-    Pendo: getConfig().REACT_APP_FEATURE_PENDO,
     IdleFinance: getConfig().REACT_APP_FEATURE_IDLE,
     Axelar: getConfig().REACT_APP_FEATURE_AXELAR,
     Yat: getConfig().REACT_APP_FEATURE_YAT,
     WalletConnectToDapps: getConfig().REACT_APP_FEATURE_WALLET_CONNECT_TO_DAPPS,
+    WalletConnectToDappsV2: getConfig().REACT_APP_FEATURE_WALLET_CONNECT_TO_DAPPS_V2,
     Wherever: getConfig().REACT_APP_FEATURE_WHEREVER,
     SaversVaults: getConfig().REACT_APP_FEATURE_SAVERS_VAULTS,
     Yearn: getConfig().REACT_APP_FEATURE_YEARN,
+    DefiDashboard: getConfig().REACT_APP_FEATURE_DEFI_DASHBOARD,
     ArkeoAirdrop: getConfig().REACT_APP_FEATURE_ARKEO_AIRDROP,
     TradeRates: getConfig().REACT_APP_FEATURE_TRADE_RATES,
     Cowswap: getConfig().REACT_APP_FEATURE_COWSWAP,
+    ZrxAvalancheSwap: getConfig().REACT_APP_FEATURE_ZRX_AVALANCHE_SWAP,
+    ZrxBnbSmartChain: getConfig().REACT_APP_FEATURE_ZRX_BNBSMARTCHAIN,
+    ZrxEthereumSwap: getConfig().REACT_APP_FEATURE_ZRX_ETHEREUM_SWAP,
+    ZrxOptimismSwap: getConfig().REACT_APP_FEATURE_ZRX_OPTIMISM,
+    LifiSwap: getConfig().REACT_APP_FEATURE_LIFI_SWAP,
+    Mixpanel: getConfig().REACT_APP_FEATURE_MIXPANEL,
+    LiveSupport: getConfig().REACT_APP_FEATURE_LIVESUPPORT,
   },
   selectedLocale: simpleLocale(),
   balanceThreshold: '0',
   selectedCurrency: 'USD',
   currencyFormat: CurrencyFormats.DotDecimal,
   showWelcomeModal: false,
+  showConsentBanner: true,
 }
 
 export const preferences = createSlice({
@@ -96,6 +116,9 @@ export const preferences = createSlice({
     },
     setWelcomeModal(state, { payload }: { payload: { show: boolean } }) {
       state.showWelcomeModal = payload.show
+    },
+    setShowConsentBanner(state, { payload }: { payload: boolean }) {
+      state.showConsentBanner = payload
     },
   },
 })

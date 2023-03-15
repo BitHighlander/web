@@ -1,12 +1,11 @@
 import type { AssetId } from '@shapeshiftoss/caip'
-import { DEFAULT_SLIPPAGE } from 'constants/constants'
 import { useEffect, useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
 import { MemoryRouter, useLocation } from 'react-router-dom'
+import { useSwapperStore } from 'state/zustand/swapperStore/useSwapperStore'
 
 import { useDefaultAssets } from './hooks/useDefaultAssets'
 import { TradeRoutes } from './TradeRoutes/TradeRoutes'
-import type { TS } from './types'
 import { TradeAmountInputField } from './types'
 
 export type TradeProps = {
@@ -18,20 +17,26 @@ export const Trade = ({ defaultBuyAssetId }: TradeProps) => {
   const location = useLocation()
   const [hasSetDefaultValues, setHasSetDefaultValues] = useState<boolean>(false)
 
-  const methods = useForm<TS>({
-    mode: 'onChange',
-    defaultValues: {
-      fiatSellAmount: '0',
-      fiatBuyAmount: '0',
-      amount: '0',
-      sellTradeAsset: { amountCryptoPrecision: '0' },
-      buyTradeAsset: { amountCryptoPrecision: '0' },
-      isExactAllowance: false,
-      slippage: DEFAULT_SLIPPAGE,
-      action: TradeAmountInputField.SELL_CRYPTO,
-      isSendMax: false,
-    },
-  })
+  const methods = useForm({ mode: 'onChange' })
+
+  const updateFiatBuyAmount = useSwapperStore(state => state.updateBuyAmountFiat)
+  const updateFiatSellAmount = useSwapperStore(state => state.updateSellAmountFiat)
+  const updateSellAssetFiatRate = useSwapperStore(state => state.updateSellAssetFiatRate)
+  const updateBuyAssetFiatRate = useSwapperStore(state => state.updateBuyAssetFiatRate)
+  const updateFeeAssetFiatRate = useSwapperStore(state => state.updateFeeAssetFiatRate)
+  const updateAction = useSwapperStore(state => state.updateAction)
+  const updateIsExactAllowance = useSwapperStore(state => state.updateIsExactAllowance)
+  const updateAmount = useSwapperStore(state => state.updateAmount)
+  const updateQuote = useSwapperStore(state => state.updateQuote)
+  const updateTrade = useSwapperStore(state => state.updateTrade)
+  const updateBuyAsset = useSwapperStore(state => state.updateBuyAsset)
+  const updateSellAsset = useSwapperStore(state => state.updateSellAsset)
+  const updateBuyAmountCryptoPrecision = useSwapperStore(
+    state => state.updateBuyAmountCryptoPrecision,
+  )
+  const updateSellAmountCryptoPrecision = useSwapperStore(
+    state => state.updateSellAmountCryptoPrecision,
+  )
 
   // The route has changed, so re-enable the default values useEffect
   useEffect(() => setHasSetDefaultValues(false), [location])
@@ -42,8 +47,20 @@ export const Trade = ({ defaultBuyAssetId }: TradeProps) => {
       const result = await getDefaultAssets()
       if (!result) return
       const { buyAsset, sellAsset } = result
-      methods.setValue('sellTradeAsset.asset', sellAsset)
-      methods.setValue('buyTradeAsset.asset', buyAsset)
+      updateAction(TradeAmountInputField.SELL_FIAT)
+      updateIsExactAllowance(false)
+      updateBuyAsset(buyAsset)
+      updateBuyAmountCryptoPrecision('0')
+      updateAmount('0')
+      updateSellAsset(sellAsset)
+      updateSellAmountCryptoPrecision('0')
+      updateQuote(undefined)
+      updateFiatBuyAmount('0')
+      updateFiatSellAmount('0')
+      updateSellAssetFiatRate(undefined)
+      updateBuyAssetFiatRate(undefined)
+      updateFeeAssetFiatRate(undefined)
+      updateTrade(undefined)
       const defaultAssetsAreChainDefaults =
         sellAsset?.assetId === defaultAssetIdPair?.sellAssetId &&
         buyAsset?.assetId === defaultAssetIdPair?.buyAssetId
@@ -52,18 +69,6 @@ export const Trade = ({ defaultBuyAssetId }: TradeProps) => {
         // Else, we know the default values have been set, so don't run this again unless the route changes
         setHasSetDefaultValues(true)
       }
-      methods.setValue('action', TradeAmountInputField.SELL_FIAT)
-      methods.setValue('amount', '0')
-      methods.setValue('sellTradeAsset.amountCryptoPrecision', '0')
-      methods.setValue('buyTradeAsset.amountCryptoPrecision', '0')
-      methods.setValue('fiatBuyAmount', '0')
-      methods.setValue('fiatSellAmount', '0')
-      methods.setValue('quote', undefined)
-      methods.setValue('trade', undefined)
-      methods.setValue('sellAssetFiatRate', undefined)
-      methods.setValue('buyAssetFiatRate', undefined)
-      methods.setValue('feeAssetFiatRate', undefined)
-      methods.setValue('isSendMax', false)
     })()
   }, [
     defaultBuyAssetId,
@@ -74,6 +79,20 @@ export const Trade = ({ defaultBuyAssetId }: TradeProps) => {
     defaultAssetIdPair?.sellAssetId,
     defaultAssetIdPair?.buyAssetId,
     defaultAssetIdPair,
+    updateQuote,
+    updateFiatBuyAmount,
+    updateFiatSellAmount,
+    updateSellAssetFiatRate,
+    updateBuyAssetFiatRate,
+    updateFeeAssetFiatRate,
+    updateAction,
+    updateIsExactAllowance,
+    updateAmount,
+    updateTrade,
+    updateBuyAsset,
+    updateBuyAmountCryptoPrecision,
+    updateSellAsset,
+    updateSellAmountCryptoPrecision,
   ])
 
   if (!methods) return null

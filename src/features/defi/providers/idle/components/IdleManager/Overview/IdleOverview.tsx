@@ -11,7 +11,7 @@ import type {
   DefiQueryParams,
 } from 'features/defi/contexts/DefiManagerProvider/DefiCommon'
 import { DefiAction } from 'features/defi/contexts/DefiManagerProvider/DefiCommon'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { FaGift } from 'react-icons/fa'
 import { useTranslate } from 'react-polyglot'
 import type { AccountDropdownProps } from 'components/AccountDropdown/AccountDropdown'
@@ -24,7 +24,11 @@ import { useGetAssetDescriptionQuery } from 'state/slices/assetsSlice/assetsSlic
 import { IdleTag } from 'state/slices/opportunitiesSlice/resolvers/idle/constants'
 import { getIdleInvestor } from 'state/slices/opportunitiesSlice/resolvers/idle/idleInvestorSingleton'
 import type { TagDescription } from 'state/slices/opportunitiesSlice/types'
-import { serializeUserStakingId, toOpportunityId } from 'state/slices/opportunitiesSlice/utils'
+import {
+  makeDefiProviderDisplayName,
+  serializeUserStakingId,
+  toOpportunityId,
+} from 'state/slices/opportunitiesSlice/utils'
 import {
   selectAssetById,
   selectAssets,
@@ -34,8 +38,11 @@ import {
   selectMarketDataById,
   selectPortfolioCryptoBalanceByFilter,
   selectSelectedLocale,
+  selectUnderlyingStakingAssetsWithBalancesAndIcons,
 } from 'state/slices/selectors'
 import { useAppSelector } from 'state/store'
+
+import { IdleEmpty } from './IdleEmpty'
 
 const defaultMenu: DefiButtonProps[] = [
   {
@@ -77,6 +84,7 @@ export const IdleOverview: React.FC<IdleOverviewProps> = ({
   const idleInvestor = useMemo(() => getIdleInvestor(), [])
   const translate = useTranslate()
   const { query } = useBrowserRouter<DefiQueryParams, DefiParams>()
+  const [hideEmptyState, setHideEmptyState] = useState(false)
   const { chainId, contractAddress, assetReference } = query
 
   const assetNamespace = 'erc20'
@@ -151,15 +159,8 @@ export const IdleOverview: React.FC<IdleOverviewProps> = ({
   )
   if (!underlyingAsset) throw new Error(`Asset not found for AssetId ${underlyingAssetId}`)
 
-  const underlyingAssets: AssetWithBalance[] = useMemo(
-    () => [
-      {
-        ...underlyingAsset,
-        cryptoBalancePrecision: cryptoAmountAvailable.toPrecision(),
-        allocationPercentage: '1',
-      },
-    ],
-    [cryptoAmountAvailable, underlyingAsset],
+  const underlyingAssetsWithBalancesAndIcons = useAppSelector(state =>
+    selectUnderlyingStakingAssetsWithBalancesAndIcons(state, opportunityDataFilter),
   )
 
   const selectedLocale = useAppSelector(selectSelectedLocale)
@@ -221,7 +222,9 @@ export const IdleOverview: React.FC<IdleOverviewProps> = ({
         return (
           <Flex flexDir='column' px={8} py={4} key={tag}>
             <Text fontSize='lg' fontWeight='medium' translation={tagDetails.title} />
-            <Text color='gray.500' translation={tagDetails.description} />
+            {tagDetails.description && (
+              <Text color='gray.500' translation={tagDetails.description} />
+            )}
           </Flex>
         )
       } else return <Tag key={tag}>{tag}</Tag>
@@ -236,7 +239,18 @@ export const IdleOverview: React.FC<IdleOverviewProps> = ({
     )
   }
 
-  if (!underlyingAssets || !opportunityData) return null
+  if (!underlyingAssetsWithBalancesAndIcons || !opportunityData) return null
+
+  if (fiatAmountAvailable.eq(0) && !hideEmptyState) {
+    return (
+      <IdleEmpty
+        tags={opportunityData.tags as IdleTag[]}
+        apy={opportunityData.apy}
+        assetId={underlyingAssetId ?? ''}
+        onClick={() => setHideEmptyState(true)}
+      />
+    )
+  }
 
   return (
     <Overview
@@ -245,8 +259,11 @@ export const IdleOverview: React.FC<IdleOverviewProps> = ({
       asset={vaultAsset}
       name={opportunityData.name ?? ''}
       opportunityFiatBalance={fiatAmountAvailable.toFixed(2)}
-      underlyingAssetsCryptoPrecision={underlyingAssets}
-      provider='Idle Finance'
+      underlyingAssetsCryptoPrecision={underlyingAssetsWithBalancesAndIcons}
+      provider={makeDefiProviderDisplayName({
+        provider: opportunityData.provider,
+        assetName: vaultAsset.name,
+      })}
       description={{
         description: underlyingAsset.description,
         isLoaded: !descriptionQuery.isLoading,

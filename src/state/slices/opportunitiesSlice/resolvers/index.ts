@@ -6,13 +6,10 @@ import {
   cosmosSdkStakingOpportunitiesUserDataResolver,
 } from './cosmosSdk'
 import {
-  foxFarmingLpMetadataResolver,
-  foxFarmingLpOpportunityIdsResolver,
-  foxFarmingLpUserDataResolver,
-  foxFarmingStakingMetadataResolver,
-  foxFarmingStakingOpportunityIdsResolver,
-  foxFarmingStakingUserDataResolver,
-} from './foxFarming'
+  ethFoxStakingMetadataResolver,
+  ethFoxStakingOpportunityIdsResolver,
+  ethFoxStakingUserDataResolver,
+} from './ethFoxStaking'
 import {
   foxyStakingOpportunitiesMetadataResolver,
   foxyStakingOpportunitiesUserDataResolver,
@@ -23,16 +20,17 @@ import {
   idleStakingOpportunitiesUserDataResolver,
   idleStakingOpportunityIdsResolver,
 } from './idle'
-import {
-  osmosisLpOpportunitiesMetadataResolver,
-  osmosisLpOpportunityIdsResolver,
-  osmosisLpUserDataResolver,
-} from './osmosis'
+import { osmosisLpOpportunitiesMetadataResolver, osmosisLpOpportunityIdsResolver } from './osmosis'
 import {
   thorchainSaversOpportunityIdsResolver,
   thorchainSaversStakingOpportunitiesMetadataResolver,
   thorchainSaversStakingOpportunitiesUserDataResolver,
 } from './thorchainsavers'
+import {
+  uniV2LpLpOpportunityIdsResolver,
+  uniV2LpMetadataResolver,
+  uniV2LpUserDataResolver,
+} from './uniV2'
 import {
   yearnStakingOpportunitiesMetadataResolver,
   yearnStakingOpportunitiesUserDataResolver,
@@ -40,9 +38,11 @@ import {
 } from './yearn'
 
 export const DefiProviderToMetadataResolverByDeFiType = {
-  [`${DefiProvider.FoxFarming}`]: {
-    [`${DefiType.LiquidityPool}`]: foxFarmingLpMetadataResolver,
-    [`${DefiType.Staking}`]: foxFarmingStakingMetadataResolver,
+  [`${DefiProvider.UniV2}`]: {
+    [`${DefiType.LiquidityPool}`]: uniV2LpMetadataResolver,
+  },
+  [`${DefiProvider.EthFoxStaking}`]: {
+    [`${DefiType.Staking}`]: ethFoxStakingMetadataResolver,
   },
 }
 
@@ -86,9 +86,11 @@ export const DefiProviderToOpportunitiesUserDataResolverByDeFiType = {
 }
 
 export const DefiProviderToOpportunityIdsResolverByDeFiType = {
-  [`${DefiProvider.FoxFarming}`]: {
-    [`${DefiType.LiquidityPool}`]: foxFarmingLpOpportunityIdsResolver,
-    [`${DefiType.Staking}`]: foxFarmingStakingOpportunityIdsResolver,
+  [`${DefiProvider.UniV2}`]: {
+    [`${DefiType.LiquidityPool}`]: uniV2LpLpOpportunityIdsResolver,
+  },
+  [`${DefiProvider.EthFoxStaking}`]: {
+    [`${DefiType.Staking}`]: ethFoxStakingOpportunityIdsResolver,
   },
   [`${DefiProvider.Idle}`]: {
     [`${DefiType.Staking}`]: idleStakingOpportunityIdsResolver,
@@ -111,11 +113,10 @@ export const DefiProviderToOpportunityIdsResolverByDeFiType = {
 }
 
 export const DefiProviderToUserDataResolverByDeFiType = {
-  [`${DefiProvider.FoxFarming}`]: {
-    [`${DefiType.LiquidityPool}`]: foxFarmingLpUserDataResolver,
-    [`${DefiType.Staking}`]: foxFarmingStakingUserDataResolver,
+  [`${DefiProvider.UniV2}`]: {
+    [`${DefiType.LiquidityPool}`]: uniV2LpUserDataResolver,
   },
-  [`${DefiProvider.Osmosis}`]: {
-    [`${DefiType.LiquidityPool}`]: osmosisLpUserDataResolver,
+  [`${DefiProvider.EthFoxStaking}`]: {
+    [`${DefiType.Staking}`]: ethFoxStakingUserDataResolver,
   },
 }

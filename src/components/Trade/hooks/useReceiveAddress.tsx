@@ -1,9 +1,7 @@
 import type { Asset } from '@shapeshiftoss/asset-service'
 import { fromAccountId } from '@shapeshiftoss/caip'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useFormContext, useWatch } from 'react-hook-form'
+import { useCallback, useEffect, useMemo } from 'react'
 import { getReceiveAddress } from 'components/Trade/hooks/useSwapper/utils'
-import type { TS } from 'components/Trade/types'
 import { useWallet } from 'hooks/useWallet/useWallet'
 import {
   selectPortfolioAccountIdsByAssetId,
@@ -11,21 +9,16 @@ import {
 } from 'state/slices/portfolioSlice/selectors'
 import { isUtxoAccountId } from 'state/slices/portfolioSlice/utils'
 import { useAppSelector } from 'state/store'
+import { useSwapperStore } from 'state/zustand/swapperStore/useSwapperStore'
 
 export const useReceiveAddress = () => {
-  // Form hooks
-  const { control } = useFormContext<TS>()
-  const buyAssetAccountId = useWatch({ control, name: 'buyAssetAccountId' })
-  const buyTradeAsset = useWatch({ control, name: 'buyTradeAsset' })
-
   // Hooks
-  const [receiveAddress, setReceiveAddress] = useState<string | null>()
   const wallet = useWallet().state.wallet
 
-  // Constants
-  const buyAsset = buyTradeAsset?.asset
-
   // Selectors
+  const buyAssetAccountId = useSwapperStore(state => state.buyAssetAccountId)
+  const updateReceiveAddress = useSwapperStore(state => state.updateReceiveAddress)
+  const buyAsset = useSwapperStore(state => state.buyAsset)
   const buyAssetAccountIds = useAppSelector(state =>
     selectPortfolioAccountIdsByAssetId(state, { assetId: buyAsset?.assetId ?? '' }),
   )
@@ -64,17 +57,16 @@ export const useReceiveAddress = () => {
 
   // Set the receiveAddress when the buy asset changes
   useEffect(() => {
-    const buyAsset = buyTradeAsset?.asset
     if (!buyAsset) return
     ;(async () => {
       try {
         const receiveAddress = await getReceiveAddressFromBuyAsset(buyAsset)
-        setReceiveAddress(receiveAddress)
+        updateReceiveAddress(receiveAddress)
       } catch (e) {
-        setReceiveAddress(null)
+        updateReceiveAddress(undefined)
       }
     })()
-  }, [buyTradeAsset?.asset, getReceiveAddressFromBuyAsset])
+  }, [buyAsset, getReceiveAddressFromBuyAsset, updateReceiveAddress])
 
-  return { receiveAddress, getReceiveAddressFromBuyAsset }
+  return { getReceiveAddressFromBuyAsset }
 }

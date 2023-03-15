@@ -1,7 +1,6 @@
 import type { AssetId } from '@shapeshiftoss/caip'
 import type { KnownChainIds } from '@shapeshiftoss/types'
 import { useCallback } from 'react'
-import { useFormContext, useWatch } from 'react-hook-form'
 import { useSelector } from 'react-redux'
 import { useReceiveAddress } from 'components/Trade/hooks/useReceiveAddress'
 import type { CalculateAmountsArgs } from 'components/Trade/hooks/useSwapper/calculateAmounts'
@@ -9,7 +8,7 @@ import { calculateAmounts } from 'components/Trade/hooks/useSwapper/calculateAmo
 import { getTradeQuoteArgs } from 'components/Trade/hooks/useSwapper/getTradeQuoteArgs'
 import { getSwapperManager } from 'components/Trade/hooks/useSwapper/swapperManager'
 import { getFormFees } from 'components/Trade/hooks/useSwapper/utils'
-import type { DisplayFeeData, TS } from 'components/Trade/types'
+import type { DisplayFeeData } from 'components/Trade/types'
 import { TradeAmountInputField } from 'components/Trade/types'
 import { getChainAdapterManager } from 'context/PluginProvider/chainAdapterSingleton'
 import { useWallet } from 'hooks/useWallet/useWallet'
@@ -26,22 +25,12 @@ import {
   selectPortfolioAccountMetadataByAccountId,
 } from 'state/slices/selectors'
 import { store, useAppDispatch, useAppSelector } from 'state/store'
+import { useSwapperStore } from 'state/zustand/swapperStore/useSwapperStore'
 
 export const useTradeAmounts = () => {
-  // Form hooks
-  const { control, setValue } = useFormContext<TS>()
-  const buyAssetFiatRateFormState = useWatch({ control, name: 'buyAssetFiatRate' })
-  const sellAssetFiatRateFormState = useWatch({ control, name: 'sellAssetFiatRate' })
-  const sellTradeAsset = useWatch({ control, name: 'sellTradeAsset' })
-  const buyTradeAsset = useWatch({ control, name: 'buyTradeAsset' })
-  const feesFormState = useWatch({ control, name: 'fees' })
-  const amountFormState = useWatch({ control, name: 'amount' })
-  const actionFormState = useWatch({ control, name: 'action' })
-  const isSendMaxFormState = useWatch({ control, name: 'isSendMax' })
-
   // Hooks
-  const dispatch = useAppDispatch()
   const featureFlags = useAppSelector(selectFeatureFlags)
+  const appDispatch = useAppDispatch()
   const { getReceiveAddressFromBuyAsset } = useReceiveAddress()
   const wallet = useWallet().state.wallet
 
@@ -62,10 +51,23 @@ export const useTradeAmounts = () => {
   // Selectors
   const selectedCurrencyToUsdRate = useAppSelector(selectFiatToUsdRate)
   const assets = useSelector(selectAssets)
-
-  // Constants
-  const sellAssetFormState = sellTradeAsset?.asset
-  const buyAssetFormState = buyTradeAsset?.asset
+  const updateQuote = useSwapperStore(state => state.updateQuote)
+  const buyAssetFiatRateFormState = useSwapperStore(state => state.buyAssetFiatRate)
+  const sellAssetFiatRateFormState = useSwapperStore(state => state.sellAssetFiatRate)
+  const updateBuyAssetFiatRate = useSwapperStore(state => state.updateBuyAssetFiatRate)
+  const updateSellAssetFiatRate = useSwapperStore(state => state.updateSellAssetFiatRate)
+  const updateFeeAssetFiatRate = useSwapperStore(state => state.updateFeeAssetFiatRate)
+  const updateTradeAmounts = useSwapperStore(state => state.updateTradeAmounts)
+  const actionFormState = useSwapperStore(state => state.action)
+  const isSendMaxFormState = useSwapperStore(state => state.isSendMax)
+  const amountFormState = useSwapperStore(state => state.amount)
+  const updateFees = useSwapperStore(state => state.updateFees)
+  const feesFormState = useSwapperStore(state => state.fees)
+  const sellAssetFormState = useSwapperStore(state => state.sellAsset)
+  const buyAssetFormState = useSwapperStore(state => state.buyAsset)
+  const sellAmountCryptoPrecisionFormState = useSwapperStore(
+    state => state.sellAmountCryptoPrecision,
+  )
 
   const { getTradeQuote } = getTradeQuoteApi.endpoints
   const { getUsdRates } = getUsdRatesApi.endpoints
@@ -84,12 +86,14 @@ export const useTradeAmounts = () => {
         sellAmountSellAssetBaseUnit,
         args.sellAsset.precision,
       )
-      setValue('fiatSellAmount', fiatSellAmount)
-      setValue('fiatBuyAmount', fiatBuyAmount)
-      setValue('buyTradeAsset.amountCryptoPrecision', buyTradeAssetAmount)
-      setValue('sellTradeAsset.amountCryptoPrecision', sellTradeAssetAmount)
+      updateTradeAmounts({
+        buyAmountCryptoPrecision: buyTradeAssetAmount,
+        sellAmountCryptoPrecision: sellTradeAssetAmount,
+        fiatSellAmount,
+        fiatBuyAmount,
+      })
     },
-    [setValue],
+    [updateTradeAmounts],
   )
 
   // Use the existing fiat rates and quote without waiting for fresh data
@@ -143,11 +147,15 @@ export const useTradeAmounts = () => {
       switch (action) {
         case TradeAmountInputField.SELL_FIAT:
         case TradeAmountInputField.SELL_CRYPTO:
-          setValue('sellTradeAsset.amountCryptoPrecision', amount)
+          updateTradeAmounts({
+            sellAmountCryptoPrecision: amount,
+          })
           break
         case TradeAmountInputField.BUY_FIAT:
         case TradeAmountInputField.BUY_CRYPTO:
-          setValue('buyTradeAsset.amountCryptoPrecision', amount)
+          updateTradeAmounts({
+            buyAmountCryptoPrecision: amount,
+          })
           break
         default:
           break
@@ -189,13 +197,13 @@ export const useTradeAmounts = () => {
         wallet,
         receiveAddress,
         sellAmountBeforeFeesCryptoPrecision:
-          sellTradeAsset?.amountCryptoPrecision || amountToUse || '0',
+          sellAmountCryptoPrecisionFormState || amountToUse || '0',
         isSendMax: sendMax ?? isSendMaxFormState,
       })
 
       const availableSwappers = tradeQuoteArgs
         ? (
-            await dispatch(
+            await appDispatch(
               getAvailableSwappers.initiate({
                 ...tradeQuoteArgs,
                 feeAsset,
@@ -211,13 +219,13 @@ export const useTradeAmounts = () => {
       const bestTradeSwapper = bestSwapperType ? swappers.get(bestSwapperType) : undefined
 
       if (!bestTradeSwapper) {
-        setValue('quote', undefined)
-        setValue('fees', undefined)
+        updateQuote(undefined)
+        updateFees(undefined)
         return
       }
 
       const quoteResponse = tradeQuoteArgs
-        ? await dispatch(getTradeQuote.initiate(tradeQuoteArgs))
+        ? await appDispatch(getTradeQuote.initiate(tradeQuoteArgs))
         : undefined
 
       // If we can't get a quote our trade fee will be 0 - this is likely not desired long-term
@@ -231,7 +239,7 @@ export const useTradeAmounts = () => {
         : undefined
 
       const { data: usdRates = undefined } = tradeQuoteArgs
-        ? await dispatch(
+        ? await appDispatch(
             getUsdRates.initiate({
               feeAssetId,
               tradeQuoteArgs,
@@ -240,8 +248,8 @@ export const useTradeAmounts = () => {
         : {}
 
       if (usdRates) {
-        setValue('quote', quoteResponse?.data)
-        setValue('fees', formFees)
+        updateQuote(quoteResponse?.data)
+        updateFees(formFees)
         setTradeAmounts({
           amount: amountToUse,
           action: actionToUse,
@@ -254,30 +262,34 @@ export const useTradeAmounts = () => {
           sellAssetTradeFeeUsd: bnOrZero(formFees?.sellAssetTradeFeeUsd),
         })
       } else {
-        setValue('sellAssetFiatRate', undefined)
-        setValue('buyAssetFiatRate', undefined)
-        setValue('feeAssetFiatRate', undefined)
-        setValue('fees', undefined)
+        updateBuyAssetFiatRate(undefined)
+        updateSellAssetFiatRate(undefined)
+        updateFeeAssetFiatRate(undefined)
       }
     },
     [
-      actionFormState,
-      amountFormState,
-      assets,
       buyAssetFormState?.assetId,
-      dispatch,
-      featureFlags,
-      getAvailableSwappers,
+      sellAssetFormState?.assetId,
+      amountFormState,
+      actionFormState,
+      wallet,
+      assets,
       getReceiveAddressFromBuyAsset,
+      sellAmountCryptoPrecisionFormState,
+      isSendMaxFormState,
+      appDispatch,
+      getAvailableSwappers,
+      featureFlags,
       getTradeQuote,
       getUsdRates,
-      isSendMaxFormState,
-      selectedCurrencyToUsdRate,
-      sellAssetFormState?.assetId,
-      sellTradeAsset?.amountCryptoPrecision,
+      updateTradeAmounts,
+      updateQuote,
+      updateFees,
       setTradeAmounts,
-      setValue,
-      wallet,
+      selectedCurrencyToUsdRate,
+      updateBuyAssetFiatRate,
+      updateSellAssetFiatRate,
+      updateFeeAssetFiatRate,
     ],
   )
 

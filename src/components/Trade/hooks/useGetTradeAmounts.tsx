@@ -1,11 +1,10 @@
-import { useFormContext, useWatch } from 'react-hook-form'
 import type { CalculateAmountsArgs } from 'components/Trade/hooks/useSwapper/calculateAmounts'
-import type { TS } from 'components/Trade/types'
 import { TradeAmountInputField } from 'components/Trade/types'
 import { bnOrZero } from 'lib/bignumber/bignumber'
 import { fromBaseUnit, toBaseUnit } from 'lib/math'
 import { selectFiatToUsdRate } from 'state/slices/marketDataSlice/selectors'
 import { useAppSelector } from 'state/store'
+import { useSwapperStore } from 'state/zustand/swapperStore/useSwapperStore'
 
 type GetTradeAmountConstantsArgs = CalculateAmountsArgs
 
@@ -180,26 +179,21 @@ export const getTradeAmountConstants = ({
 }
 
 export const useGetTradeAmounts = () => {
-  // Form hooks
-  const { control } = useFormContext<TS>()
-  const amount = useWatch({ control, name: 'amount' })
-  const buyTradeAsset = useWatch({ control, name: 'buyTradeAsset' })
-  const sellTradeAsset = useWatch({ control, name: 'sellTradeAsset' })
-  const buyAssetUsdRate = useWatch({ control, name: 'buyAssetFiatRate' })
-  const sellAssetUsdRate = useWatch({ control, name: 'sellAssetFiatRate' })
-  const fees = useWatch({ control, name: 'fees' })
-  const action = useWatch({ control, name: 'action' })
+  const buyAssetUsdRate = useSwapperStore(state => state.buyAssetFiatRate)
+  const sellAssetUsdRate = useSwapperStore(state => state.sellAssetFiatRate)
+  const action = useSwapperStore(state => state.action)
+  const amount = useSwapperStore(state => state.amount)
+  const fees = useSwapperStore(state => state.fees)
 
   const selectedCurrencyToUsdRate = useAppSelector(selectFiatToUsdRate)
 
-  const buyAsset = buyTradeAsset?.asset
-  const sellAsset = sellTradeAsset?.asset
+  const buyAsset = useSwapperStore(state => state.buyAsset)
+  const sellAsset = useSwapperStore(state => state.sellAsset)
+  const sellAmountCryptoPrecision = useSwapperStore(state => state.sellAmountCryptoPrecision)
+  const buyAmountCryptoPrecision = useSwapperStore(state => state.buyAmountCryptoPrecision)
   const sellAssetTradeFeeUsd = bnOrZero(fees?.sellAssetTradeFeeUsd)
   const buyAssetTradeFeeUsd = bnOrZero(fees?.buyAssetTradeFeeUsd)
-  if (
-    !bnOrZero(buyTradeAsset?.amountCryptoPrecision).gt(0) ||
-    !bnOrZero(sellTradeAsset?.amountCryptoPrecision).gt(0)
-  )
+  if (!bnOrZero(buyAmountCryptoPrecision).gt(0) || !bnOrZero(sellAmountCryptoPrecision).gt(0))
     return
   if (!amount) return
   if (!action) return

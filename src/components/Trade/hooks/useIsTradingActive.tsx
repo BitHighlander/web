@@ -1,39 +1,52 @@
 import { useEffect, useState } from 'react'
-import { useFormContext, useWatch } from 'react-hook-form'
-import { useSwapper } from 'components/Trade/hooks/useSwapper/useSwapper'
-import type { TS } from 'components/Trade/types'
 import { getIsTradingActiveApi } from 'state/apis/swapper/getIsTradingActiveApi'
 import { useAppDispatch } from 'state/store'
+import { useSwapperStore } from 'state/zustand/swapperStore/useSwapperStore'
 
 export const useIsTradingActive = () => {
   const [isTradingActiveOnSellPool, setIsTradingActiveOnSellPool] = useState(false)
+  const [isTradingActiveOnBuyPool, setIsTradingActiveOnBuyPool] = useState(false)
 
-  const { bestTradeSwapper } = useSwapper()
   const dispatch = useAppDispatch()
 
-  const { control } = useFormContext<TS>()
-  const sellTradeAsset = useWatch({ control, name: 'sellTradeAsset' })
-  const sellTradeAssetId = sellTradeAsset?.asset?.assetId
+  const buyAsset = useSwapperStore(state => state.buyAsset)
+  const sellAsset = useSwapperStore(state => state.sellAsset)
+  const sellAssetId = sellAsset?.assetId
+  const buyAssetId = buyAsset?.assetId
 
   const { getIsTradingActive } = getIsTradingActiveApi.endpoints
+  const bestTradeSwapper = useSwapperStore(state => state.activeSwapperWithMetadata?.swapper)
 
   useEffect(() => {
     ;(async () => {
-      const isTradingActiveResult =
-        sellTradeAssetId &&
+      const isTradingActiveOnSellPoolResult =
+        sellAssetId &&
         bestTradeSwapper &&
         (
           await dispatch(
             getIsTradingActive.initiate({
-              assetId: sellTradeAssetId,
+              assetId: sellAssetId,
               swapperName: bestTradeSwapper.name,
             }),
           )
         ).data
 
-      setIsTradingActiveOnSellPool(!!isTradingActiveResult)
-    })()
-  }, [bestTradeSwapper, dispatch, getIsTradingActive, sellTradeAssetId])
+      const isTradingActiveOnBuyPoolResult =
+        buyAssetId &&
+        bestTradeSwapper &&
+        (
+          await dispatch(
+            getIsTradingActive.initiate({
+              assetId: buyAssetId,
+              swapperName: bestTradeSwapper.name,
+            }),
+          )
+        ).data
 
-  return { isTradingActiveOnSellPool }
+      setIsTradingActiveOnSellPool(!!isTradingActiveOnSellPoolResult)
+      setIsTradingActiveOnBuyPool(!!isTradingActiveOnBuyPoolResult)
+    })()
+  }, [bestTradeSwapper, buyAssetId, dispatch, getIsTradingActive, sellAssetId])
+
+  return { isTradingActiveOnSellPool, isTradingActiveOnBuyPool }
 }

@@ -1,10 +1,9 @@
 import type { Asset } from '@shapeshiftoss/asset-service'
 import { useCallback } from 'react'
-import { useFormContext } from 'react-hook-form'
 import { useHistory } from 'react-router-dom'
 import { useTradeAmounts } from 'components/Trade/hooks/useTradeAmounts'
-import type { TS } from 'components/Trade/types'
 import { TradeAmountInputField, TradeRoutePaths } from 'components/Trade/types'
+import { useSwapperStore } from 'state/zustand/swapperStore/useSwapperStore'
 
 export enum AssetClickAction {
   Buy = 'buy',
@@ -15,47 +14,63 @@ export const useTradeRoutes = (): {
   handleAssetClick: (asset: Asset, action: AssetClickAction) => void
 } => {
   const history = useHistory()
-  const { getValues, setValue } = useFormContext<TS>()
   const { setTradeAmountsRefetchData } = useTradeAmounts()
-  const buyTradeAsset = getValues('buyTradeAsset')
-  const sellTradeAsset = getValues('sellTradeAsset')
+
+  const updateSelectedSellAssetAccountId = useSwapperStore(
+    state => state.updateSelectedSellAssetAccountId,
+  )
+  const updateSellAssetAccountId = useSwapperStore(state => state.updateSellAssetAccountId)
+  const updateSelectedBuyAssetAccountId = useSwapperStore(
+    state => state.updateSelectedBuyAssetAccountId,
+  )
+  const updateFees = useSwapperStore(state => state.updateFees)
+  const clearAmounts = useSwapperStore(state => state.clearAmounts)
+  const updateBuyAssetAccountId = useSwapperStore(state => state.updateBuyAssetAccountId)
+  const updateBuyAssetFiatRate = useSwapperStore(state => state.updateBuyAssetFiatRate)
+  const updateFeeAssetFiatRate = useSwapperStore(state => state.updateFeeAssetFiatRate)
+  const updateSellAssetFiatRate = useSwapperStore(state => state.updateSellAssetFiatRate)
+  const buyAsset = useSwapperStore(state => state.buyAsset)
+  const sellAsset = useSwapperStore(state => state.sellAsset)
+  const updateBuyAsset = useSwapperStore(state => state.updateBuyAsset)
+  const updateSellAsset = useSwapperStore(state => state.updateSellAsset)
+  const updateSellAmountCryptoPrecision = useSwapperStore(
+    state => state.updateSellAmountCryptoPrecision,
+  )
+  const updateBuyAmountCryptoPrecision = useSwapperStore(
+    state => state.updateBuyAmountCryptoPrecision,
+  )
 
   const handleAssetClick = useCallback(
     async (asset: Asset, action: AssetClickAction) => {
       const isBuy = action === AssetClickAction.Buy
       const isSell = action === AssetClickAction.Sell
-      const isSameAsset =
-        asset.assetId === (isBuy ? sellTradeAsset?.asset?.assetId : buyTradeAsset?.asset?.assetId)
-      const previousSellTradeAsset = { ...getValues('sellTradeAsset') }
-      const previousBuyTradeAsset = { ...getValues('buyTradeAsset') }
+      const isSameAsset = asset.assetId === (isBuy ? sellAsset?.assetId : buyAsset?.assetId)
+      const previousSellAsset = sellAsset
+      const previousBuyAsset = buyAsset
 
       if (isBuy) {
-        setValue('buyTradeAsset.asset', asset)
-        isSameAsset && setValue('sellTradeAsset.asset', previousBuyTradeAsset.asset)
-        setValue('selectedBuyAssetAccountId', undefined)
-        setValue('buyAssetAccountId', undefined)
+        updateBuyAsset(asset)
+        updateBuyAmountCryptoPrecision('')
+        isSameAsset && updateSellAsset(previousBuyAsset)
+        isSameAsset && updateSellAmountCryptoPrecision('')
+        updateSelectedBuyAssetAccountId(undefined)
+        updateBuyAssetAccountId(undefined)
       }
 
       if (isSell) {
-        setValue('sellTradeAsset.asset', asset)
-        isSameAsset && setValue('buyTradeAsset.asset', previousSellTradeAsset.asset)
-        setValue('selectedSellAssetAccountId', undefined)
-        setValue('sellAssetAccountId', undefined)
+        updateSellAsset(asset)
+        updateSellAmountCryptoPrecision('')
+        isSameAsset && updateBuyAsset(previousSellAsset)
+        isSameAsset && updateBuyAmountCryptoPrecision('')
+        updateSelectedSellAssetAccountId(undefined)
+        updateSellAssetAccountId(undefined)
+        updateBuyAssetFiatRate(undefined)
+        updateSellAssetFiatRate(undefined)
+        updateFeeAssetFiatRate(undefined)
+        updateFees(undefined)
       }
 
-      setValue('action', TradeAmountInputField.SELL_FIAT)
-      setValue('amount', '0')
-      setValue('sellTradeAsset.amountCryptoPrecision', '0')
-      setValue('buyTradeAsset.amountCryptoPrecision', '0')
-      setValue('fiatBuyAmount', '0')
-      setValue('fiatSellAmount', '0')
-      setValue('quote', undefined)
-      setValue('trade', undefined)
-      setValue('sellAssetFiatRate', undefined)
-      setValue('buyAssetFiatRate', undefined)
-      setValue('feeAssetFiatRate', undefined)
-      setValue('isSendMax', false)
-
+      clearAmounts()
       history.push(TradeRoutePaths.Input)
 
       await setTradeAmountsRefetchData({
@@ -66,12 +81,23 @@ export const useTradeRoutes = (): {
       })
     },
     [
-      sellTradeAsset?.asset?.assetId,
-      buyTradeAsset?.asset?.assetId,
-      getValues,
-      setValue,
-      setTradeAmountsRefetchData,
+      sellAsset,
+      buyAsset,
+      clearAmounts,
       history,
+      setTradeAmountsRefetchData,
+      updateBuyAsset,
+      updateBuyAmountCryptoPrecision,
+      updateSellAsset,
+      updateSellAmountCryptoPrecision,
+      updateSelectedBuyAssetAccountId,
+      updateBuyAssetAccountId,
+      updateSelectedSellAssetAccountId,
+      updateSellAssetAccountId,
+      updateBuyAssetFiatRate,
+      updateSellAssetFiatRate,
+      updateFeeAssetFiatRate,
+      updateFees,
     ],
   )
 

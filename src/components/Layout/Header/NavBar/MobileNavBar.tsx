@@ -21,6 +21,7 @@ export const MobileNavBar = () => {
       const isActive = location?.pathname.includes(route?.path ?? '')
       return (
         <Button
+          key={route.path}
           as={ReactRouterLink}
           to={route.path}
           flexDir='column'
@@ -33,6 +34,7 @@ export const MobileNavBar = () => {
           _active={{ bg: 'transparent', svg: { color: 'blue.200' } }}
           py={2}
           width='full'
+          zIndex='sticky'
         >
           {route.icon}
           <Flex flexDir='column' fontSize='xs' color={isActive ? 'white' : 'gray.500'}>
