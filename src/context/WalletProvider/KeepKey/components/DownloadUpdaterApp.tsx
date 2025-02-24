@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FaApple, FaLinux, FaWindows } from 'react-icons/fa'
 import { Text } from 'components/Text'
 import type { TextPropTypes } from 'components/Text/Text'
+import { useWallet } from 'hooks/useWallet/useWallet'
+import { useModal } from 'hooks/useModal/useModal'
 
 import { getPlatform } from '../helpers'
 
@@ -12,6 +14,8 @@ export const KeepKeyDownloadUpdaterApp = () => {
   const [urlMacOS, setUrlMacOS] = useState('')
   const [urlWindows, setUrlWindows] = useState('')
   const [urlLinux, setUrlLinux] = useState('')
+  const { state: { wallet }, disconnect } = useWallet()
+  const { close } = useModal('keepKeyDownload')
 
   const findLatestReleaseLinks = async () => {
     try {
@@ -88,8 +92,18 @@ export const KeepKeyDownloadUpdaterApp = () => {
 
     const url = getDownloadUrl()
     console.log('Download URL:', url)
+    
+    // Disconnect the wallet before downloading
+    if (wallet) {
+      disconnect()
+    }
+    
+    // Close the modal
+    close()
+    
+    // Trigger the download
     window.location.href = url
-  }, [platform, urlMacOS, urlWindows, urlLinux])
+  }, [platform, urlMacOS, urlWindows, urlLinux, wallet, disconnect, close])
 
   return (
     <>

@@ -83,6 +83,14 @@ export const KeepKeyMenu = () => {
   }
 
   const handleUpdateClick = () => {
+    // Reset device state before opening download modal
+    setDeviceState({
+      lastDeviceInteractionStatus: undefined,
+      awaitingDeviceInteraction: false,
+    })
+    // Close the menu
+    onToggle()
+    // Open the download modal
     keepKeyDownload.open({})
   }
 
