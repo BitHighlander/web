@@ -5,9 +5,9 @@ import {
   AlertTitle,
   Box,
   CloseButton,
-  Link,
   Text,
   useToast,
+  Button,
 } from '@chakra-ui/react'
 import type { Features } from '@keepkey/device-protocol/lib/messages_pb'
 import type { KeepKeyHDWallet } from '@shapeshiftoss/hdwallet-keepkey'
@@ -26,6 +26,7 @@ import type { RadioOption } from 'components/Radio/Radio'
 import { useWallet } from 'hooks/useWallet/useWallet'
 import { poll } from 'lib/poll/poll'
 import { isKeepKeyHDWallet } from 'lib/utils'
+import { useModal } from 'hooks/useModal/useModal'
 
 import { useKeepKeyVersions } from './KeepKey/hooks/useKeepKeyVersions'
 
@@ -124,9 +125,10 @@ export const KeepKeyProvider = ({ children }: { children: React.ReactNode }): JS
   const {
     state: { wallet },
   } = useWallet()
-  const { versions, updaterUrl, isLTCSupportedFirmwareVersion } = useKeepKeyVersions()
+  const { versions, isLTCSupportedFirmwareVersion } = useKeepKeyVersions()
   const translate = useTranslate()
   const toast = useToast()
+  const keepKeyDownload = useModal('keepKeyDownload')
   const keepKeyWallet = useMemo(
     () => (wallet && isKeepKeyHDWallet(wallet) ? wallet : undefined),
     [wallet],
@@ -186,7 +188,7 @@ export const KeepKeyProvider = ({ children }: { children: React.ReactNode }): JS
 
   useEffect(() => {
     if (!keepKeyWallet) return
-    if (!versions || !updaterUrl) return
+    if (!versions) return
 
     if (
       (versions.bootloader.updateAvailable || versions.firmware.updateAvailable) &&
@@ -211,9 +213,18 @@ export const KeepKeyProvider = ({ children }: { children: React.ReactNode }): JS
                     </Text>
                   ) : null}
                 </AlertDescription>
-                <Link href={updaterUrl} display={'block'} fontWeight={'bold'} mt={2} isExternal>
-                  {translate('updateToast.keepKey.downloadCta')}
-                </Link>
+                <Box mt={2}>
+                  <Button
+                    colorScheme='blue'
+                    variant='link'
+                    onClick={() => {
+                      keepKeyDownload.open({})
+                      onClose()
+                    }}
+                  >
+                    {translate('updateToast.keepKey.downloadCta')}
+                  </Button>
+                </Box>
               </Box>
               <CloseButton
                 alignSelf='flex-start'
@@ -238,7 +249,7 @@ export const KeepKeyProvider = ({ children }: { children: React.ReactNode }): JS
     translate,
     versions,
     onClose,
-    updaterUrl,
+    keepKeyDownload,
   ])
 
   const value: IKeepKeyContext = useMemo(

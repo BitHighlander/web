@@ -21,6 +21,7 @@ export type Modals = {
   fiatRamps: FC<FiatRampsModalProps>
   settings: FC
   keepKeyWipe: FC
+  keepKeyDownload: FC
   backupNativePassphrase: FC<BackupPassphraseModalProps>
   mobileWelcomeModal: FC
   addAccount: FC

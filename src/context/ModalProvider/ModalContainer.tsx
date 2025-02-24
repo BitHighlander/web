@@ -188,6 +188,14 @@ const LedgerOpenAppModal = makeSuspenseful(
   ),
 )
 
+const KeepKeyDownloadModal = makeSuspenseful(
+  lazy(() =>
+    import('components/Modals/KeepKey/DownloadModal').then(({ KeepKeyDownloadModal }) => ({
+      default: KeepKeyDownloadModal,
+    })),
+  ),
+)
+
 export const MODALS: Modals = {
   receive: ReceiveModal,
   qrCode: QrCodeModal,
@@ -196,6 +204,7 @@ export const MODALS: Modals = {
   fiatRamps: FiatRampsModal,
   settings: SettingsModal,
   keepKeyWipe: WipeModal,
+  keepKeyDownload: KeepKeyDownloadModal,
   backupNativePassphrase: BackupPassphraseModal,
   mobileWelcomeModal: MobileWelcomeModal,
   addAccount: AddAccountModal,

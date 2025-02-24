@@ -9,40 +9,33 @@ import { getPlatform } from '../helpers'
 
 export const KeepKeyDownloadUpdaterApp = () => {
   const platform = useMemo(() => getPlatform(), [])
-  const [downloadUrls, setDownloadUrls] = useState<{
-    macOS: string
-    Windows: string
-    Linux: string
-  }>({
-    macOS: '',
-    Windows: '',
-    Linux: '',
-  })
+  const [urlMacOS, setUrlMacOS] = useState('')
+  const [urlWindows, setUrlWindows] = useState('')
+  const [urlLinux, setUrlLinux] = useState('')
+
+  const findLatestReleaseLinks = async () => {
+    try {
+      const resp = await axios({ 
+        method: 'GET', 
+        url: 'https://api.github.com/repos/keepkey/keepkey-desktop/releases/latest' 
+      })
+      console.log('findLatestReleaseLinks', resp.data)
+      let version = resp.data.tag_name
+      version = version.replace('v', '')
+      setUrlMacOS(`https://github.com/keepkey/keepkey-desktop/releases/download/v${version}/KeepKey-Desktop-${version}-universal.dmg`)
+      setUrlWindows(`https://github.com/keepkey/keepkey-desktop/releases/download/v${version}/KeepKey-Desktop-Setup-${version}.exe`)
+      setUrlLinux(`https://github.com/keepkey/keepkey-desktop/releases/download/v${version}/KeepKey-Desktop-${version}.AppImage`)
+    } catch (e) {
+      console.error(' e: ', e)
+    }
+  }
 
   useEffect(() => {
-    const fetchLatestRelease = async () => {
-      try {
-        const resp = await axios({
-          method: 'GET',
-          url: 'https://api.github.com/repos/keepkey/keepkey-desktop/releases/latest',
-        })
-        console.log('GitHub Release Data:', resp.data)
-        const version = resp.data.tag_name.replace('v', '')
-        console.log('Version:', version)
-        setDownloadUrls({
-          macOS: `https://github.com/keepkey/keepkey-desktop/releases/download/v${version}/KeepKey-Desktop-${version}-universal.dmg`,
-          Windows: `https://github.com/keepkey/keepkey-desktop/releases/download/v${version}/KeepKey-Desktop-Setup-${version}.exe`,
-          Linux: `https://github.com/keepkey/keepkey-desktop/releases/download/v${version}/KeepKey-Desktop-${version}.AppImage`,
-        })
-      } catch (error) {
-        console.error('Error fetching latest release:', error)
-      }
-    }
-    fetchLatestRelease()
+    findLatestReleaseLinks()
   }, [])
 
   const platformFilename = useMemo(() => {
-    const version = downloadUrls.macOS.split('/v')[1]?.split('/')[0]
+    const version = urlMacOS.split('/v')[1]?.split('/')[0]
     if (!version) return 'Desktop App'
     switch (platform) {
       case 'Mac OS':
@@ -54,7 +47,7 @@ export const KeepKeyDownloadUpdaterApp = () => {
       default:
         return 'Desktop App'
     }
-  }, [platform, downloadUrls.macOS])
+  }, [platform, urlMacOS])
 
   const platformIcon = useMemo(() => {
     switch (platform) {
@@ -83,11 +76,11 @@ export const KeepKeyDownloadUpdaterApp = () => {
     const getDownloadUrl = () => {
       switch (platform) {
         case 'Mac OS':
-          return downloadUrls.macOS
+          return urlMacOS
         case 'Windows':
-          return downloadUrls.Windows
+          return urlWindows
         case 'Linux':
-          return downloadUrls.Linux
+          return urlLinux
         default:
           return 'https://github.com/keepkey/keepkey-desktop/releases/latest'
       }
@@ -95,8 +88,8 @@ export const KeepKeyDownloadUpdaterApp = () => {
 
     const url = getDownloadUrl()
     console.log('Download URL:', url)
-    window.open(url, '_blank', 'noopener,noreferrer')
-  }, [platform, downloadUrls])
+    window.location.href = url
+  }, [platform, urlMacOS, urlWindows, urlLinux])
 
   return (
     <>
@@ -108,7 +101,11 @@ export const KeepKeyDownloadUpdaterApp = () => {
         {platform && (
           <>
             <CText fontWeight='bold'>{platform}</CText>
-            <Link isExternal href='https://github.com/keepkey/keepkey-desktop/releases/latest'>
+            <Link 
+              href='https://github.com/keepkey/keepkey-desktop/releases/latest'
+              isExternal
+              textDecoration='none'
+            >
               <Text color='text.subtle' translation={wrongPlatformTranslation} mb={2} />
             </Link>
           </>

@@ -10,6 +10,7 @@ export const MODAL_KEYS: (keyof Modals)[] = [
   'fiatRamps',
   'settings',
   'keepKeyWipe',
+  'keepKeyDownload',
   'backupNativePassphrase',
   'mobileWelcomeModal',
   'addAccount',

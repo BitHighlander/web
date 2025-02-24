@@ -50,12 +50,13 @@ export const KeepKeyMenu = () => {
   const {
     state: { deviceTimeout, features },
   } = useKeepKey()
-  const { versions, updaterUrl } = useKeepKeyVersions()
+  const { versions } = useKeepKeyVersions()
   const {
     setDeviceState,
     state: { isConnected, walletInfo },
   } = useWallet()
   const keepKeyWipe = useModal('keepKeyWipe')
+  const keepKeyDownload = useModal('keepKeyDownload')
 
   // Reset ephemeral device state properties when opening the KeepKey menu
   useEffect(() => {
@@ -79,6 +80,10 @@ export const KeepKeyMenu = () => {
 
   const handleWipeClick = () => {
     keepKeyWipe.open({})
+  }
+
+  const handleUpdateClick = () => {
+    keepKeyDownload.open({})
   }
 
   const deviceTimeoutTranslation: string =
@@ -134,7 +139,7 @@ export const KeepKeyMenu = () => {
             badgeColor={versions?.bootloader.updateAvailable ? 'yellow' : 'green'}
             valueDisposition={versions?.bootloader.updateAvailable ? 'info' : 'neutral'}
             isDisabled={!versions?.bootloader.updateAvailable}
-            externalUrl={updaterUrl}
+            onClick={versions?.bootloader.updateAvailable ? handleUpdateClick : undefined}
           />
           <ExpandedMenuItem
             label='walletProvider.keepKey.settings.menuLabels.firmware'
@@ -143,7 +148,7 @@ export const KeepKeyMenu = () => {
             badgeColor={versions?.firmware.updateAvailable ? 'yellow' : 'green'}
             valueDisposition={versions?.firmware.updateAvailable ? 'info' : 'neutral'}
             isDisabled={!versions?.firmware.updateAvailable}
-            externalUrl={updaterUrl}
+            onClick={versions?.firmware.updateAvailable ? handleUpdateClick : undefined}
           />
           <MenuDivider />
           <ExpandedMenuItem
