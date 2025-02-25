@@ -1,4 +1,4 @@
-import { Button, Icon, Link, ModalBody, ModalHeader, Text as CText } from '@chakra-ui/react'
+import { Button, Icon, ModalBody, ModalHeader, Text as CText } from '@chakra-ui/react'
 import { useMemo } from 'react'
 import { FaApple, FaLinux, FaWindows } from 'react-icons/fa'
 import { Text } from 'components/Text'
@@ -48,6 +48,16 @@ export const KeepKeyDownloadUpdaterApp = () => {
     [platformFilename],
   )
 
+  const handleDownload = (url: string) => {
+    // Create a temporary link element
+    const link = document.createElement('a')
+    link.href = url
+    link.download = platformFilename || 'KeepKey-Updater'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   const updaterUrl = platformFilename ? `${UPDATER_BASE_URL}${platformFilename}` : RELEASE_PAGE
 
   return (
@@ -60,12 +70,12 @@ export const KeepKeyDownloadUpdaterApp = () => {
         {platform && (
           <>
             <CText fontWeight='bold'>{platform}</CText>
-            <Link isExternal href={RELEASE_PAGE}>
-              <Text color='text.subtle' translation={wrongPlatformTranslation} mb={2} />
-            </Link>
+            <Button variant='link' onClick={() => handleDownload(RELEASE_PAGE)} mb={2}>
+              <Text color='text.subtle' translation={wrongPlatformTranslation} />
+            </Button>
           </>
         )}
-        <Button as={Link} width='full' isExternal href={updaterUrl} colorScheme='blue' mt={2}>
+        <Button width='full' onClick={() => handleDownload(updaterUrl)} colorScheme='blue' mt={2}>
           <Text translation={downloadUpdaterTranslation} />
         </Button>
       </ModalBody>

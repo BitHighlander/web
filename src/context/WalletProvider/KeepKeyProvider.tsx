@@ -8,6 +8,7 @@ import {
   Link,
   Text,
   useToast,
+  Button,
 } from '@chakra-ui/react'
 import type { Features } from '@keepkey/device-protocol/lib/messages_pb'
 import type { KeepKeyHDWallet } from '@shapeshiftoss/hdwallet-keepkey'
@@ -26,6 +27,7 @@ import type { RadioOption } from 'components/Radio/Radio'
 import { useWallet } from 'hooks/useWallet/useWallet'
 import { poll } from 'lib/poll/poll'
 import { isKeepKeyHDWallet } from 'lib/utils'
+import { WalletActions } from 'context/WalletProvider/actions'
 
 import { useKeepKeyVersions } from './KeepKey/hooks/useKeepKeyVersions'
 
@@ -211,9 +213,16 @@ export const KeepKeyProvider = ({ children }: { children: React.ReactNode }): JS
                     </Text>
                   ) : null}
                 </AlertDescription>
-                <Link href={updaterUrl} display={'block'} fontWeight={'bold'} mt={2} isExternal>
+                <Button
+                  onClick={() => dispatch({ type: WalletActions.DOWNLOAD_UPDATER, payload: false })}
+                  display={'block'}
+                  fontWeight={'bold'}
+                  mt={2}
+                  variant='link'
+                  color='white'
+                >
                   {translate('updateToast.keepKey.downloadCta')}
-                </Link>
+                </Button>
               </Box>
               <CloseButton
                 alignSelf='flex-start'
