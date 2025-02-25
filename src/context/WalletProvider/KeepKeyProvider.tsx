@@ -125,6 +125,7 @@ const KeepKeyContext = createContext<IKeepKeyContext | null>(null)
 export const KeepKeyProvider = ({ children }: { children: React.ReactNode }): JSX.Element => {
   const {
     state: { wallet },
+    dispatch: walletDispatch,
   } = useWallet()
   const { versions, updaterUrl, isLTCSupportedFirmwareVersion } = useKeepKeyVersions()
   const translate = useTranslate()
@@ -214,7 +215,7 @@ export const KeepKeyProvider = ({ children }: { children: React.ReactNode }): JS
                   ) : null}
                 </AlertDescription>
                 <Button
-                  onClick={() => dispatch({ type: WalletActions.DOWNLOAD_UPDATER, payload: false })}
+                  onClick={() => walletDispatch({ type: WalletActions.DOWNLOAD_UPDATER, payload: false })}
                   display={'block'}
                   fontWeight={'bold'}
                   mt={2}
@@ -248,6 +249,7 @@ export const KeepKeyProvider = ({ children }: { children: React.ReactNode }): JS
     versions,
     onClose,
     updaterUrl,
+    walletDispatch,
   ])
 
   const value: IKeepKeyContext = useMemo(
