@@ -10,7 +10,7 @@
 !.yarn/versions
 
 # generated files
-packages/unchained-client/src/generated
+# packages/unchained-client/src/generated  # Committed for faster Vercel builds
 
 # dependencies
 node_modules
@@ -43,3 +43,5 @@ yarn-error.log*
 # idea
 *.iml
 .idea/
+.vercel
+.env*.local
