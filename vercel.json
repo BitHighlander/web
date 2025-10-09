@@ -1,8 +1,8 @@
 {
-  "buildCommand": "./vercel-build.sh",
+  "buildCommand": "MODE=production yarn build:web",
   "outputDirectory": "build",
   "framework": null,
-  "installCommand": "yarn install --immutable",
+  "installCommand": "python3 -m pip install --user setuptools && yarn install --immutable",
   "build": {
     "env": {
       "NODE_VERSION": "22",
