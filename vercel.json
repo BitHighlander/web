@@ -1,11 +1,12 @@
 {
-  "buildCommand": "python3 -m pip install setuptools && MODE=production yarn build:web",
+  "buildCommand": "./vercel-build.sh",
   "outputDirectory": "build",
   "framework": null,
   "installCommand": "yarn install --immutable",
   "build": {
     "env": {
-      "NODE_VERSION": "22"
+      "NODE_VERSION": "22",
+      "PYTHONPATH": "/vercel/.pyenv_mirror/user/current/lib/python3.12/site-packages"
     }
   }
 }
