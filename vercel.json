@@ -1,11 +1,10 @@
 {
-  "buildCommand": "MODE=production yarn build:web",
+  "buildCommand": "python3 -m pip install setuptools && MODE=production yarn build:web",
   "outputDirectory": "build",
   "framework": null,
   "installCommand": "yarn install --immutable",
   "build": {
     "env": {
-      "PYTHON_VERSION": "3.11",
       "NODE_VERSION": "22"
     }
   }
